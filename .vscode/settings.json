@@ -1,0 +1,18 @@
+{
+  "cSpell.words": [
+    "banlify",
+    "breakline",
+    "bumpp",
+    "commitlint",
+    "esno",
+    "pnpm",
+    "tsup",
+    "typecheck",
+    "vite",
+    "vitest"
+  ],
+  "prettier.enable": false,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": true
+  }
+}
