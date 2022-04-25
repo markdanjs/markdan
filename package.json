@@ -1,18 +1,18 @@
 {
-  "name": "--name--",
+  "name": "markdan",
   "version": "0.0.0",
   "packageManager": "pnpm@6.32.3",
   "description": "",
   "keywords": [],
-  "homepage": "https://github.com/banlify/--name--#readme",
+  "homepage": "https://github.com/js2-43/markdan#readme",
   "bugs": {
-    "url": "https://github.com/banlify/--name--/issues"
+    "url": "https://github.com/js2-43/markdan/issues"
   },
   "license": "MIT",
   "author": "chestnut <banlify@163.com>",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/banlify/--name--.git"
+    "url": "git@github.com:js2-43/markdan.git"
   },
   "main": "./dist/index.cjs",
   "module": "./dist/index.mjs",
@@ -52,6 +52,7 @@
     "@antfu/eslint-config": "^0.18.9",
     "@antfu/ni": "^0.13.2",
     "@babel/types": "^7.17.0",
+    "@changesets/cli": "^2.22.0",
     "@commitlint/cli": "^16.2.3",
     "@commitlint/config-conventional": "^16.2.1",
     "@types/node": "^17.0.23",

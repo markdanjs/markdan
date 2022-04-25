@@ -5,6 +5,7 @@
     "bumpp",
     "commitlint",
     "esno",
+    "markdan",
     "pnpm",
     "tsup",
     "typecheck",
