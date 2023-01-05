@@ -1,0 +1,16 @@
+{
+  "name": "markdan",
+  "version": "0.0.0",
+  "license": "MIT",
+  "main": "index.js",
+  "buildOptions": {
+    "name": "markdan"
+  },
+  "bugs": {
+    "url": "https://github.com/markdanjs/markdan/issues"
+  },
+  "homepage": "https://github.com/markdanjs/markdan/tree/main/packages/markdan#readme",
+  "dependencies": {
+    "@markdan/parser": "workspace:^0.0.0"
+  }
+}
