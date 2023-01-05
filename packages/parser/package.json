@@ -8,6 +8,7 @@
     "directory": "packages/parser"
   },
   "main": "index.js",
+  "files": ["dist/*"],
   "buildOptions": {
     "name": "MarkdanParser"
   },

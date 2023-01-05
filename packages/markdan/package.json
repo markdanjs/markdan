@@ -6,6 +6,9 @@
   "buildOptions": {
     "name": "markdan"
   },
+  "files": [
+    "dist/*"
+  ],
   "bugs": {
     "url": "https://github.com/markdanjs/markdan/issues"
   },

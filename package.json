@@ -1,6 +1,7 @@
 {
   "name": "markdan",
   "version": "0.0.0",
+  "private": true,
   "packageManager": "pnpm@6.32.3",
   "description": "",
   "keywords": [
@@ -45,7 +46,7 @@
   "scripts": {
     "dev": "node scripts/dev.js",
     "build": "rimraf dist && esno ./scripts/build.ts",
-    "lint": "eslint .",
+    "lint": "eslint . --fix",
     "prepublishOnly": "nr build",
     "release": "bumpp --commit --push --tag && pnpm publish",
     "start": "esno src/index.ts",
