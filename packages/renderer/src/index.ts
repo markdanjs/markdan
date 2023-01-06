@@ -1,3 +1,1 @@
-export const render = () => {
-  return 'Render'
-}
+export * from './renderer'

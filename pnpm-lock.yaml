@@ -57,8 +57,16 @@ importers:
   packages/markdan:
     specifiers:
       '@markdan/parser': workspace:^0.0.0
+      '@markdan/renderer': workspace:^0.0.0
     dependencies:
       '@markdan/parser': link:../parser
+      '@markdan/renderer': link:../renderer
+
+  packages/renderer:
+    specifiers:
+      '@markdan/shared': workspace:^0.0.0
+    dependencies:
+      '@markdan/shared': link:../shared
 
 packages:
 

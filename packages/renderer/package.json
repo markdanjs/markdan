@@ -8,12 +8,17 @@
     "directory": "packages/renderer"
   },
   "main": "index.js",
-  "files": ["dist/*"],
+  "files": [
+    "dist/*"
+  ],
   "buildOptions": {
     "name": "MarkdanRenderer"
   },
   "bugs": {
     "url": "https://github.com/markdanjs/markdan/issues"
   },
-  "homepage": "https://github.com/markdanjs/markdan/tree/main/packages/renderer#readme"
+  "homepage": "https://github.com/markdanjs/markdan/tree/main/packages/renderer#readme",
+  "dependencies": {
+    "@markdan/shared": "workspace:^0.0.0"
+  }
 }

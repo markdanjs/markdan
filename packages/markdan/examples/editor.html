@@ -5,7 +5,13 @@
 </div>
 
 <script>
-  const { one, parse } = markdan
+  const { createEditor } = markdan
 
-  console.log(one, parse())
+  const editor = createEditor().mount('#root')
+
+  console.log(editor)
+
+  setTimeout(() => {
+    editor.setMode('source')
+  }, 1000)
 </script>
