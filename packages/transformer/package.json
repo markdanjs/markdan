@@ -1,0 +1,19 @@
+{
+  "name": "@markdan/transformer",
+  "version": "0.0.0",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/markdanjs/markdangit",
+    "directory": "packages/transformer"
+  },
+  "main": "index.js",
+  "files": ["dist/*"],
+  "buildOptions": {
+    "name": "MarkdanTransformer"
+  },
+  "bugs": {
+    "url": "https://github.com/markdanjs/markdan/issues"
+  },
+  "homepage": "https://github.com/markdanjs/markdan/tree/main/packages/transformer#readme"
+}

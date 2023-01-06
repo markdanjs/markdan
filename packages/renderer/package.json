@@ -1,0 +1,19 @@
+{
+  "name": "@markdan/renderer",
+  "version": "0.0.0",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/markdanjs/markdangit",
+    "directory": "packages/renderer"
+  },
+  "main": "index.js",
+  "files": ["dist/*"],
+  "buildOptions": {
+    "name": "MarkdanRenderer"
+  },
+  "bugs": {
+    "url": "https://github.com/markdanjs/markdan/issues"
+  },
+  "homepage": "https://github.com/markdanjs/markdan/tree/main/packages/renderer#readme"
+}
