@@ -1,3 +1,3 @@
 export const one = 1
 
-export * from '@markdan/parser'
+export * from '@markdan/core'
