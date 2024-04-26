@@ -3,7 +3,7 @@
   "type": "module",
   "version": "0.0.0",
   "private": true,
-  "packageManager": "pnpm@6.32.3",
+  "packageManager": "pnpm@6.35.1",
   "description": "",
   "keywords": [
     "markdan",
@@ -16,7 +16,6 @@
     "url": "https://github.com/markdanjs/markdan/issues"
   },
   "license": "MIT",
-  "author": "chestnut <banlify@163.com>",
   "repository": {
     "type": "git",
     "url": "git@github.com:markdanjs/markdan.git"
@@ -49,7 +48,7 @@
     "build": "rimraf dist && esno ./scripts/build.ts",
     "lint": "eslint . --fix",
     "prepublishOnly": "nr build",
-    "release": "bumpp --commit --push --tag && pnpm publish",
+    "release": "bumpp --commit --push --tag && npm publish",
     "start": "esno src/index.ts",
     "dev:template": "run-p \"dev markdan core template-explorer\" \"serve\" open",
     "open": "open http://localhost:3000/packages/template-explorer/",
@@ -76,7 +75,6 @@
     "minimist": "^1.2.7",
     "npm-run-all": "^4.1.5",
     "npm-run-all2": "^6.1.2",
-    "pnpm": "^6.32.3",
     "rimraf": "^3.0.2",
     "serve": "^14.1.2",
     "tsup": "^5.12.1",
