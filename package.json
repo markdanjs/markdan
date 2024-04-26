@@ -3,7 +3,7 @@
   "type": "module",
   "version": "0.0.0",
   "private": true,
-  "packageManager": "pnpm@6.35.1",
+  "packageManager": "pnpm@9.0.6",
   "description": "",
   "keywords": [
     "markdan",
@@ -44,23 +44,22 @@
   ],
   "sideEffects": false,
   "scripts": {
-    "dev": "node scripts/dev.js",
-    "build": "rimraf dist && esno ./scripts/build.ts",
     "lint": "eslint . --fix",
-    "prepublishOnly": "nr build",
-    "release": "bumpp --commit --push --tag && npm publish",
-    "start": "esno src/index.ts",
-    "dev:template": "run-p \"dev markdan core template-explorer\" \"serve\" open",
-    "open": "open http://localhost:3000/packages/template-explorer/",
-    "serve": "serve",
+    "dev": "node scripts/build.js core editor engine helper -f esm -m dev",
+    "start": "pnpm --filter @markdan/template-explorer run dev",
+    "dev:template": "run-p dev start",
+    "build-lib": "node scripts/build.js markdan -f esm",
+    "emit-typed": "tsc ./packages/markdan/src/index.ts --declaration --emitDeclarationOnly --outDir ./packages/markdan/dist",
+    "build": "run-p  emit-typed",
+    "prepublishOnly": "npm run build",
+    "release": "bumpp --commit --push --tag && pnpm publish",
+    "rm-rf": "rimraf dist",
     "test": "vitest",
     "typecheck": "tsc --noEmit",
     "prepare": "husky install"
   },
   "devDependencies": {
     "@antfu/eslint-config": "^0.18.9",
-    "@antfu/ni": "^0.13.2",
-    "@babel/types": "^7.17.0",
     "@changesets/cli": "^2.22.0",
     "@commitlint/cli": "^16.2.3",
     "@commitlint/config-conventional": "^16.2.1",
@@ -73,15 +72,10 @@
     "husky": "^7.0.4",
     "lint-staged": "^12.3.7",
     "minimist": "^1.2.7",
-    "npm-run-all": "^4.1.5",
     "npm-run-all2": "^6.1.2",
     "rimraf": "^3.0.2",
-    "serve": "^14.1.2",
-    "tsup": "^5.12.1",
     "typescript": "^4.6.2",
-    "vite": "^2.8.6",
-    "vitest": "^0.7.10",
-    "zx": "^6.0.7"
+    "vitest": "^0.7.10"
   },
   "lint-staged": {
     "*.{ts?(x)}": "eslint --fix"

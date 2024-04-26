@@ -1,5 +1,5 @@
-import type { MarkdanContext } from '@markdan/core'
-import type { MarkdanSchema } from 'packages/core/src/schema'
+import type { MarkdanContext, MarkdanSchema } from '@markdan/core'
+
 import { parseSchema } from './view'
 import { parseViewBlocks } from './render'
 

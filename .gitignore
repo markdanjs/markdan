@@ -9,3 +9,4 @@ lib-cov
 logs
 node_modules
 temp
+/packages/template-explorer/src/lib

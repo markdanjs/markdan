@@ -65,7 +65,7 @@ export function createApp() {
 
       ctx.config.containerRect = oEl.getBoundingClientRect()
 
-      ctx.config.style = options.style = normalizeStyle({
+      ctx.config.style = normalizeStyle({
         ...initialStyle,
         ...options.style,
       }, ctx.config)

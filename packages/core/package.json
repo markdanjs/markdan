@@ -8,12 +8,19 @@
     "directory": "packages/core"
   },
   "main": "index.js",
-  "files": ["dist/*"],
+  "files": [
+    "dist/*"
+  ],
   "buildOptions": {
     "name": "MarkdanCore"
   },
   "bugs": {
     "url": "https://github.com/markdanjs/markdan/issues"
   },
-  "homepage": "https://github.com/markdanjs/markdan/tree/main/packages/core#readme"
+  "homepage": "https://github.com/markdanjs/markdan/tree/main/packages/core#readme",
+  "devDependencies": {
+    "@markdan/editor": "workspace:*",
+    "@markdan/engine": "workspace:*",
+    "@markdan/helper": "workspace:*"
+  }
 }

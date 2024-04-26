@@ -5,6 +5,7 @@
     "commitlint",
     "esno",
     "markdan",
+    "markdanjs",
     "pnpm",
     "tsup",
     "typecheck",

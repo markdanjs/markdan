@@ -1,9 +1,13 @@
 {
   "compilerOptions": {
     "baseUrl": ".",
-    "target": "es2017",
+    "declaration": true,
+    "target": "ESNext",
     "module": "esnext",
-    "lib": ["esnext", "DOM"],
+    "lib": [
+      "esnext",
+      "DOM"
+    ],
     "moduleResolution": "node",
     "esModuleInterop": true,
     "outDir": "dist",
@@ -12,11 +16,17 @@
     "resolveJsonModule": true,
     "skipLibCheck": true,
     "skipDefaultLibCheck": true,
-    "types": ["node"],
+    "types": [
+      "node"
+    ],
     "rootDir": ".",
     "paths": {
-      "@markdan/*": ["packages/*/src"],
-      "markdan": ["packages/markdan/src"]
+      "@markdan/*": [
+        "packages/*/src"
+      ],
+      "markdan": [
+        "packages/markdan/src"
+      ]
     }
   },
   "include": [

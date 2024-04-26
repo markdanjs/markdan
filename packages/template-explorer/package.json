@@ -9,5 +9,12 @@
     "compat": true,
     "env": "development",
     "enableNonBrowserBranches": true
+  },
+  "scripts": {
+    "dev": "vite --open"
+  },
+  "devDependencies": {
+    "@markdan/core": "workspace:*",
+    "vite": "^5.2.10"
   }
 }
