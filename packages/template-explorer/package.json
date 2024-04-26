@@ -1,0 +1,13 @@
+{
+  "name": "@markdan/template-explorer",
+  "version": "0.0.0",
+  "private": true,
+  "buildOptions": {
+    "formats": [
+      "global"
+    ],
+    "compat": true,
+    "env": "development",
+    "enableNonBrowserBranches": true
+  }
+}
