@@ -10,4 +10,5 @@ export {
 
 export {
   type MarkdanSchemaElement,
+  type MarkdanSchema,
 } from './schema'

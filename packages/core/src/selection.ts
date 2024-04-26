@@ -1,5 +1,4 @@
-import { getBlockIdByNode, getBlockPositionByClick, isOnlyAltKey, isPointInRect } from '@markdan/helper'
-import { getModifierKeys, isOnlyShiftKey } from 'packages/helper/src/modifier-keys'
+import { getBlockIdByNode, getBlockPositionByClick, getModifierKeys, isOnlyAltKey, isOnlyShiftKey, isPointInRect } from '@markdan/helper'
 import type { MarkdanContext } from './apiCreateApp'
 
 /**

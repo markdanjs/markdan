@@ -8,12 +8,21 @@ const require = createRequire(import.meta.url)
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const args = minimist(process.argv.slice(2))
 
+// 运行模式
+const mode = args.m || 'prod'
+
+const isDev = mode === 'dev'
+
+// 如果是开发模式则输出到 template-explorer 中
+const outputDir = isDev
+  ? resolve(__dirname, '../packages/template-explorer/src/lib/index.js')
+  : false
+
 // 需要打包的模块，默认打包 markdan 模块
 const targets = args._.length ? args._ : ['markdan']
+
 // 打包的格式，默认为 global 即 IIFE 模式
 const format = args.f || 'global'
-
-console.log(args)
 
 // 打包文件的输出格式
 const outputFormat = format.startsWith('global')
@@ -26,7 +35,7 @@ for (const target of targets) {
   // 打包的入口文件
   const entry = resolve(__dirname, `../packages/${target}/src/index.ts`)
   // 输出文件路径
-  const outfile = resolve(__dirname, `../packages/${target}/dist/${target}.${format}.js`)
+  const outfile = outputDir || resolve(__dirname, `../packages/${target}/dist/${target}.${format}.js`)
 
   // 读取模块中的 package.json 文件
   const pkg = require(resolve(__dirname, `../packages/${target}/package.json`))
@@ -53,8 +62,9 @@ for (const target of targets) {
       // },
     })
     .then((ctx) => {
-      console.log(ctx)
-      ctx.watch()
-      console.log(`watching: ${relativeOutfile}`)
+      if (isDev) {
+        ctx.watch()
+        console.log(`watching: ${relativeOutfile}`)
+      }
     })
 }
