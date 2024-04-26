@@ -14,6 +14,6 @@
   },
   "homepage": "https://github.com/markdanjs/markdan/tree/main/packages/markdan#readme",
   "dependencies": {
-    "@markdan/parser": "workspace:^0.0.0"
+    "@markdan/core": "workspace:^0.0.0"
   }
 }

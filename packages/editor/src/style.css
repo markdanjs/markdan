@@ -1,0 +1,39 @@
+:where(.markdan-editor-container) {
+  position: relative;
+  width: var(--width, 100%);
+  height: var(--height, 100%);
+  font-size: var(--font-size, 16px);
+  line-height: var(--line-height, 24px);
+  user-select: none;
+}
+
+:where(.markdan-editor-viewer) {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+
+  .view-line {
+    width: max-content;
+  }
+}
+
+:where(.markdan-editor-cursor) {
+  position: absolute;
+  z-index: 9;
+  width: 2px;
+  height: var(--line-height);
+  background-color: red;
+  opacity: 0;
+
+  &.is-visible {
+    opacity: 1;
+  }
+}
+
+:where(.markdan-editor-range) {
+  position: absolute;
+  height: var(--line-height);
+  background-color: red;
+  border-radius: 2px;
+  opacity: .2;
+}
