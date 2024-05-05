@@ -1,3 +1,12 @@
+export interface Point {
+  x: number
+  y: number
+}
+export interface Rectangle extends Point {
+  width: number
+  height: number
+}
+
 /**
  * 通过 editor 点击位置，分析选中的 block 位置，以及确定点击的是哪个字符
  */
@@ -43,9 +52,57 @@ export function getBlockIdByNode(node: Node) {
   return id
 }
 
-export function isPointInRect({ left, top }: { left: number; top: number }, { x, y, width, height }: { x: number; y: number; width: number; height: number }): boolean {
-  return left >= x
-    && left <= x + width
-    && top >= y
-    && top <= y + height
+export function isPointInRect(point: Point, { x, y, width, height }: Rectangle): boolean {
+  return point.x >= x
+    && point.x <= x + width
+    && point.y >= y
+    && point.y <= y + height
+}
+
+export function isMouseMoveOut(el: HTMLElement, e: MouseEvent) {
+  const { x, y, width, height } = el.getBoundingClientRect()
+
+  const { clientX, clientY } = e
+
+  return !isPointInRect({
+    x: clientX,
+    y: clientY,
+  }, {
+    x,
+    y,
+    width,
+    height,
+  })
+}
+
+export function getRangePosition(blockId: string, offset: number, el: HTMLElement) {
+  const n = el.querySelector(`[data-id="${blockId}"]`)
+
+  if (!n) {
+    throw new Error(`Cannot find node by block id(${blockId})`)
+  }
+
+  const range = new Range()
+
+  range.setStart(n.firstChild!, offset)
+  range.setEnd(n.firstChild!, offset)
+
+  return range.getBoundingClientRect()
+}
+
+/**
+ * 修正选区中的 top 值，消除 DOM 的差异
+ */
+export function amendTop(top: number, viewLineTop: number, lineHeight: number | string, max: number) {
+  if (top <= viewLineTop) return viewLineTop
+
+  const height = typeof lineHeight === 'string' ? parseInt(lineHeight) : lineHeight
+  const half = height / 2
+
+  let vTop = viewLineTop
+  while (vTop < max && top > vTop + half) {
+    vTop += height
+  }
+
+  return vTop
 }

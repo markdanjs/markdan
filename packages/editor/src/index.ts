@@ -1,10 +1,10 @@
 export {
-  type MarkdanInterfaceOptions,
-  type MarkdanInterfaceStyle,
+  MarkdanInterface,
+  MarkdanInterfaceOptions,
+  MarkdanInterfaceStyle,
+  MarkdanInterfaceTheme,
   createEditorInterfaceApi,
   normalizeStyle,
 } from './apiInterface'
 
-export {
-  initialStyle,
-} from './config/editor.config'
+export * from './config/editor.config'
