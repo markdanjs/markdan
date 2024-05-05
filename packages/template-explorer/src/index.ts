@@ -5,10 +5,11 @@ import './lib/index.css'
 
 createApp()
   .mount('#app', {
+    theme: 'light',
     style: {
-      width: '100px',
-      height: '100px',
-      fontSize: '16px',
-      lineHeight: '20px',
+      width: '100%',
+      height: '100%',
+      fontSize: 16,
+      lineHeight: 20,
     },
   })

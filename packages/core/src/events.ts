@@ -1,26 +1,27 @@
-import type { MarkdanRenderBlock, MarkdanViewBlock } from '@markdan/engine'
+import type { MarkdanViewBlock } from '@markdan/engine'
 import type { MarkdanContext } from './index'
 
 export function registerEventHandler(ctx: MarkdanContext) {
   function handleMouseDown(e: MouseEvent) {
-    ctx.selection.addRange(e)
+    ctx.selection.handleMouseDown(e)
 
     document.addEventListener('mousemove', handleMouseMove)
+    document.addEventListener('mouseup', handleMouseUp)
   }
 
   function handleMouseMove(e: MouseEvent) {
-    ctx.selection.setRange(e)
+    ctx.selection.handleMouseMove(e)
   }
 
   function handleMouseUp(e: MouseEvent) {
-    ctx.selection.setRange(e)
+    ctx.selection.handleMouseUp(e)
 
     document.removeEventListener('mousemove', handleMouseMove)
+    document.removeEventListener('mouseup', handleMouseUp)
   }
 
-  ctx.emitter.on('blocks:change', (viewBlocks: MarkdanViewBlock[], renderBlocks: MarkdanRenderBlock[]) => {
+  ctx.emitter.on('blocks:change', (viewBlocks: MarkdanViewBlock[]) => {
     ctx.viewBlocks = viewBlocks
-    ctx.renderBlocks = renderBlocks
   })
 
   ctx.emitter.on('editor:mouse:down', handleMouseDown)

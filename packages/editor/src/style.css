@@ -2,18 +2,52 @@
   position: relative;
   width: var(--width, 100%);
   height: var(--height, 100%);
-  font-size: var(--font-size, 16px);
   line-height: var(--line-height, 24px);
+  font-size: var(--font-size, 16px);
+  font-family: var(--font-family, "Courier New", Menlo, Monaco, monospace, Menlo, Monaco, "Courier New", monospace);
+  font-feature-settings: "liga" 0, "calt" 0;
+  font-variation-settings: normal;
+  font-weight: normal;
+  letter-spacing: 0;
   user-select: none;
+  color: var(--color-primary);
+  background-color: var(--color-bg);
+  overflow: hidden;
+
+  --gap: 20px;
+
+  --color-bg: #fff;
+  --color-primary: #24292e;
+  --color-secondary: #666;
+  --color-cursor: #2d2e30;
+  --color-selection: hsla(0, 0%, 44%, 0.2);
+
+  &.dark {
+    --color-bg: #272822;
+    --color-primary: #ecedee;
+    --color-secondary: #90908a;
+    --color-cursor: #f5f4f4;
+    --color-selection: hsla(0, 0%, 100%, 0.2);
+  }
 }
 
 :where(.markdan-editor-viewer) {
   position: absolute;
   inset: 0;
   z-index: 10;
+  cursor: text;
 
   .view-line {
     width: max-content;
+  }
+
+  * {
+    margin: 0;
+  }
+
+  h1 {
+    font-size: 32px;
+    line-height: 44px;
   }
 }
 
@@ -22,18 +56,23 @@
   z-index: 9;
   width: 2px;
   height: var(--line-height);
-  background-color: red;
-  opacity: 0;
-
-  &.is-visible {
-    opacity: 1;
-  }
+  background-color: var(--color-cursor);
+  opacity: 1;
+  animation: mdOpacityAni linear 1.2s infinite;
 }
 
 :where(.markdan-editor-range) {
   position: absolute;
   height: var(--line-height);
-  background-color: red;
+  background-color: var(--color-selection);
   border-radius: 2px;
-  opacity: .2;
+}
+
+@keyframes mdOpacityAni {
+  0%, 50% {
+    opacity: 1;
+  }
+  51%, 100% {
+    opacity: 0;
+  }
 }

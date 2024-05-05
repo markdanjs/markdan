@@ -1,7 +1,8 @@
-import type { MarkdanInterfaceOptions, MarkdanInterfaceStyle } from '@markdan/editor'
-import { createEditorInterfaceApi, initialStyle, normalizeStyle } from '@markdan/editor'
-import type { MarkdanRenderBlock, MarkdanViewBlock } from '@markdan/engine'
+import type { MarkdanInterface, MarkdanInterfaceOptions, MarkdanInterfaceStyle, MarkdanInterfaceTheme } from '@markdan/editor'
+import { createEditorInterfaceApi, initialStyle, initialTheme, normalizeStyle } from '@markdan/editor'
+import type { MarkdanRenderedElement, MarkdanViewBlock } from '@markdan/engine'
 import { initEngine } from '@markdan/engine'
+import type { DeepPartialObject } from '@markdan/helper'
 import { EditorSelection } from './selection'
 import EventEmitter from './emitter'
 import { registerEventHandler } from './events'
@@ -20,7 +21,9 @@ export interface Markdan {
 export interface MarkdanConfig {
   uid: string
   containerRect: DOMRect
+  theme: MarkdanInterfaceTheme
   style: MarkdanInterfaceStyle
+  lineNumber: boolean
 }
 
 export interface MarkdanContext {
@@ -28,9 +31,10 @@ export interface MarkdanContext {
   selection: EditorSelection
   dataSource: string
   viewBlocks: MarkdanViewBlock[]
-  renderBlocks: MarkdanRenderBlock[]
+  renderedElements: MarkdanRenderedElement[]
   schema: MarkdanSchema
   emitter: EventEmitter
+  interface: MarkdanInterface
 }
 
 export function createAppContext() {
@@ -40,8 +44,9 @@ export function createAppContext() {
     schema: createSchemaApi(),
     dataSource: '',
     viewBlocks: [],
-    renderBlocks: [],
+    renderedElements: [],
     emitter: new EventEmitter(),
+    interface: {} as MarkdanInterface,
   }
 
   ctx.selection = new EditorSelection(ctx)
@@ -56,19 +61,23 @@ export function createApp() {
 
   return {
     use() {},
-    mount(el: string | HTMLElement, options: MarkdanInterfaceOptions) {
+    mount(el: string | HTMLElement, options: DeepPartialObject<MarkdanInterfaceOptions> = {}) {
       const oEl = typeof el === 'string' ? document.querySelector<HTMLElement>(el) : el
 
       if (!oEl) {
         throw new TypeError(`el expect a selector or a HTML element, but got ${el}`)
       }
 
-      ctx.config.containerRect = oEl.getBoundingClientRect()
-
-      ctx.config.style = normalizeStyle({
-        ...initialStyle,
-        ...options.style,
-      }, ctx.config)
+      const containerRect = oEl.getBoundingClientRect()
+      Object.assign(ctx.config, {
+        containerRect,
+        style: normalizeStyle({
+          ...initialStyle,
+          ...options.style,
+        }, containerRect.width, containerRect.height),
+        theme: options.theme ?? initialTheme,
+        lineNumber: !!options.lineNumber,
+      })
 
       // 注册事件处理
       registerEventHandler(ctx)
@@ -76,7 +85,7 @@ export function createApp() {
       // 初始化引擎
       initEngine(ctx)
 
-      createEditorInterfaceApi(oEl, options, ctx)
+      ctx.interface = createEditorInterfaceApi(oEl, ctx)
 
       ctx.schema.append(ctx.schema.createElement('h1', [], 'Heading 1'))
       const h2 = ctx.schema.append(ctx.schema.createElement('h2', [], ''))
