@@ -26,10 +26,8 @@ function addCursor(blockId: string, offset: number, el: HTMLElement, ctx: Markda
         x,
         y,
       },
-      // style: { lineHeight },
     },
     schema: { elements },
-    // viewBlocks,
     renderedElements,
   } = ctx
   const oCursor = document.createElement('div')
@@ -39,11 +37,9 @@ function addCursor(blockId: string, offset: number, el: HTMLElement, ctx: Markda
 
   const viewLineId = blockElement.groupIds[0] ?? blockId
 
-  // const renderBlock = viewBlocks.find(b => b.id === viewLineId)!
-  // const viewLineId = renderBlock.groupIds?[0] ?? renderBlock.id
   const element = renderedElements.find(e => e.id === viewLineId)!
 
-  const t = amendTop(top - y, element.y, element.lineHeight/** @todo - 这个值并不适用所有场景 */, element.height)
+  const t = amendTop(top - y, element.y, element.lineHeight, element.height)
 
   oCursor.style.cssText = `left: ${left - x - 1}px; top: ${t}px; height: ${element.lineHeight}px;`
 
@@ -54,7 +50,7 @@ function addCursor(blockId: string, offset: number, el: HTMLElement, ctx: Markda
  * 渲染选区
  */
 function renderRangeRectangles(range: EditorSelectionRange) {
-  (range._rectangles ?? []).forEach((item) => {
+  (range.rectangles ?? []).forEach((item) => {
     const oRange = document.createElement('div')
     oRange.classList.add(CLASS_NAMES.editorRange)
     oRange.style.cssText = `left: ${item.x}px; top: ${item.y}px; width: ${Math.max(8, item.width)}px; height: ${item.height}px;`

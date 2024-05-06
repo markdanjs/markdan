@@ -59,6 +59,20 @@ export function isPointInRect(point: Point, { x, y, width, height }: Rectangle):
     && point.y <= y + height
 }
 
+export function isRectCross({ x: x1, y: y1, width: w1, height: h1 }: Rectangle, { x: x2, y: y2, width: w2, height: h2 }: Rectangle): boolean {
+  return Math.max(x1, x2) <= Math.min(x1 + w1, x2 + w2)
+    && Math.max(y1, y2) <= Math.min(y1 + h1, y2 + h2)
+}
+
+export function isRectContainRect({ x: x1, y: y1, width: w1, height: h1 }: Rectangle, { x: x2, y: y2, width: w2, height: h2 }: Rectangle): boolean {
+  return (x1 <= x2 && y1 <= y2 && x1 + w1 >= x2 + w2 && y1 + h1 >= y2 + h2)
+    || (x1 >= x2 && y1 >= y2 && x1 + w1 <= x2 + w2 && y1 + h1 <= y2 + h2)
+}
+
+export function getIntersectionArea({ x: x1, y: y1, width: w1, height: h1 }: Rectangle, { x: x2, y: y2, width: w2, height: h2 }: Rectangle) {
+  return (Math.min(x1 + w1, x2 + w2) - Math.max(x1, x2)) * (Math.min(y1 + h1, y2 + h2) - Math.max(y1, y2))
+}
+
 export function isMouseMoveOut(el: HTMLElement, e: MouseEvent) {
   const { x, y, width, height } = el.getBoundingClientRect()
 
