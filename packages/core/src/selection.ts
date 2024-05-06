@@ -1,18 +1,167 @@
 import type { Rectangle } from '@markdan/helper'
-import { amendTop, getBlockIdByNode, getBlockPositionByClick, getModifierKeys, getRangePosition, isMouseMoveOut, isOnlyAltKey, isOnlyShiftKey, isPointInRect } from '@markdan/helper'
+import { amendTop, getBlockIdByNode, getBlockPositionByClick, getIntersectionArea, getModifierKeys, getRangePosition, isMouseMoveOut, isOnlyAltKey, isOnlyShiftKey, isPointInRect, isRectContainRect, isRectCross } from '@markdan/helper'
 import type { MarkdanViewBlock } from '@markdan/engine'
 import type { MarkdanContext } from './apiCreateApp'
+export class EditorSelectionRange {
+  #ctx: MarkdanContext
+  #rectangles: Rectangle[] = []
 
-/**
- * Editor selection
- */
-export interface EditorSelectionRange {
-  uid: string
-  anchorBlock: string
-  anchorOffset: number
-  focusBlock: string
-  focusOffset: number
-  _rectangles?: Rectangle[]
+  constructor(
+    public anchorBlock: string,
+    public anchorOffset: number,
+    public focusBlock: string,
+    public focusOffset: number,
+    ctx: MarkdanContext,
+  ) {
+    this.#ctx = ctx
+    this.#setRangeRectangle()
+  }
+
+  get uid() {
+    return this.#ctx.config.uid
+  }
+
+  get rectangles() {
+    return this.#rectangles
+  }
+
+  get isCollapsed() {
+    return this.anchorBlock === this.focusBlock
+      && this.anchorOffset === this.focusOffset
+  }
+
+  setStart(block: string, offset: number): EditorSelectionRange {
+    this.anchorBlock = block
+    this.anchorOffset = offset
+    this.#setRangeRectangle()
+    return this
+  }
+
+  setEnd(block: string, offset: number): EditorSelectionRange {
+    this.focusBlock = block
+    this.focusOffset = offset
+    this.#setRangeRectangle()
+    return this
+  }
+
+  #setRangeRectangle() {
+    if (this.isCollapsed) {
+      // 闭合选区无需渲染
+      return
+    }
+
+    const {
+      config: {
+        containerRect: {
+          x,
+          y,
+        },
+      },
+      schema: { elements },
+      interface: { mainViewer },
+      renderedElements,
+    } = this.#ctx
+
+    const {
+      anchorBlock,
+      anchorOffset,
+      focusBlock,
+      focusOffset,
+    } = this
+
+    const rectangles: Rectangle[] = []
+
+    const anchorBlockElement = elements.find(el => el.id === anchorBlock)!
+    const focusBlockElement = elements.find(el => el.id === focusBlock)!
+
+    const startViewLineId = anchorBlockElement.groupIds[0] ?? anchorBlock
+    const endViewLineId = focusBlockElement.groupIds[0] ?? focusBlock
+
+    const startViewLineRenderedElement = renderedElements.find(b => b.id === startViewLineId)!
+    const endViewLineRenderedElement = renderedElements.find(b => b.id === endViewLineId)!
+
+    let { left: startLeft, top: startTop } = getRangePosition(anchorBlock, anchorOffset, mainViewer)
+    let { left: endLeft, top: endTop } = getRangePosition(focusBlock, focusOffset, mainViewer)
+
+    startLeft = startLeft - x
+    startTop = amendTop(startTop - y, startViewLineRenderedElement.y, startViewLineRenderedElement.lineHeight, startViewLineRenderedElement.height)
+
+    endLeft = endLeft - x
+    endTop = amendTop(endTop - y, endViewLineRenderedElement.y, endViewLineRenderedElement.lineHeight, endViewLineRenderedElement.height)
+
+    if (startTop === endTop) {
+      // 在同一行选取
+      rectangles.push({
+        x: Math.min(startLeft, endLeft),
+        y: startTop,
+        width: Math.abs(startLeft - endLeft),
+        height: startViewLineRenderedElement.lineHeight,
+      })
+    } else {
+      // 跨行选取
+      const startViewLine = mainViewer.querySelector<HTMLElement>(`[data-id="${startViewLineId}"]`)!
+      const endViewLine = mainViewer.querySelector<HTMLElement>(`[data-id="${endViewLineId}"]`)!
+
+      let startViewLineRect = startViewLine.getBoundingClientRect()
+      let endViewLineRect = endViewLine.getBoundingClientRect()
+
+      let start
+      let end
+
+      if (startTop > endTop) {
+        // 交换
+        [startViewLineRect, endViewLineRect] = [endViewLineRect, startViewLineRect]
+        start = {
+          x: endLeft,
+          y: endTop,
+          width: startViewLineRect.width - endLeft,
+          height: startViewLineRect.height,
+        }
+        end = {
+          x: 0,
+          y: startTop,
+          width: startLeft,
+          height: endViewLineRect.height,
+        }
+      } else {
+        start = {
+          x: startLeft,
+          y: startTop,
+          width: startViewLineRect.width - startLeft,
+          height: startViewLineRect.height,
+        }
+        end = {
+          x: 0,
+          y: endTop,
+          width: endLeft,
+          height: endViewLineRect.height,
+        }
+      }
+
+      start.width += 10 // 延长 10px 选择区
+      rectangles.push(start, end)
+
+      const [sIdx, eIdx] = [
+        renderedElements.findIndex(b => b.id === startViewLine.dataset.id),
+        renderedElements.findIndex(b => b.id === endViewLine.dataset.id),
+      ]
+
+      renderedElements
+        .slice(Math.min(sIdx, eIdx) + 1, Math.max(sIdx, eIdx))
+        .map(({ x, y, width, height }) => {
+          rectangles.push({
+            x,
+            y,
+            width: width + 10, // 延长 10px 选择区
+            height,
+          })
+
+          return null
+        })
+    }
+
+    this.#rectangles = rectangles
+  }
 }
 
 export class EditorSelection {
@@ -31,41 +180,25 @@ export class EditorSelection {
     return this.#ranges
   }
 
-  get uid() {
-    return this.#ctx.config.uid
-  }
-
   addRange(
     anchorBlock: EditorSelectionRange['anchorBlock'],
     anchorOffset: EditorSelectionRange['anchorOffset'],
     focusBlock = anchorBlock,
     focusOffset = anchorOffset,
   ) {
-    const range: EditorSelectionRange = {
-      uid: this.uid,
-      anchorBlock,
-      anchorOffset,
-      focusBlock,
-      focusOffset,
-    }
+    const range = new EditorSelectionRange(anchorBlock, anchorOffset, focusBlock, focusOffset, this.#ctx)
     this.ranges.add(range)
     this.#currentRange = range
-
-    this.#setRangeRectangle()
 
     this.#ctx.emitter.emit('selection:change', this.ranges)
   }
 
   setRange(
-    range: EditorSelectionRange,
     focusBlock: EditorSelectionRange['focusBlock'],
     focusOffset: EditorSelectionRange['focusOffset'],
   ) {
-    range.focusBlock = focusBlock
-    range.focusOffset = focusOffset
+    this.#currentRange?.setEnd(focusBlock, focusOffset)
     this.#ctx.emitter.emit('selection:change', this.ranges)
-
-    this.#setRangeRectangle()
   }
 
   removeAllRanges() {
@@ -109,7 +242,7 @@ export class EditorSelection {
       this.addRange(block, offset)
     } else if (isOnlyShiftKey(e)) {
       if (this.#currentRange) {
-        this.setRange(this.#currentRange, block, offset)
+        this.setRange(block, offset)
       } else {
         this.addRange(block, offset)
       }
@@ -122,7 +255,6 @@ export class EditorSelection {
     }
   }
 
-  // @todo - range intersection
   handleMouseMove(e: MouseEvent) {
     if (!this.#currentRange) {
       return
@@ -132,32 +264,32 @@ export class EditorSelection {
       const { block, offset } = this.#getPositionWhenMouseout(e)
 
       this.setRange(
-        this.#currentRange,
         block,
         offset,
       )
-      return
+    } else {
+      const { node, offset } = getBlockPositionByClick(e)
+
+      const block = getBlockIdByNode(node)
+
+      if (this.isClickCurrentWithAltKey) {
+        this.isClickCurrentWithAltKey = false
+
+        const { anchorBlock, anchorOffset } = this.#currentRange
+
+        this.removeRange(this.#currentRange)
+        this.addRange(anchorBlock, anchorOffset, block, offset)
+      } else {
+        this.setRange(block, offset)
+      }
     }
 
-    const { node, offset } = getBlockPositionByClick(e)
-
-    const block = getBlockIdByNode(node)
-
-    if (this.isClickCurrentWithAltKey) {
-      this.isClickCurrentWithAltKey = false
-
-      const { anchorBlock, anchorOffset } = this.#currentRange
-
-      this.removeRange(this.#currentRange)
-      this.addRange(anchorBlock, anchorOffset, block, offset)
-
-      return
-    }
-
-    this.setRange(this.#currentRange, block, offset)
+    const ranges = this.#getIntersectionRanges()
+    ranges.map((r) => {
+      return this.removeRange(r)
+    })
   }
 
-  // @todo - range intersection
   handleMouseUp(e: MouseEvent) {
     if (this.isClickCurrentWithAltKey) {
       this.isClickCurrentWithAltKey = false
@@ -171,7 +303,6 @@ export class EditorSelection {
       const { block, offset } = this.#getPositionWhenMouseout(e)
 
       this.setRange(
-        this.#currentRange,
         block,
         offset,
       )
@@ -182,123 +313,7 @@ export class EditorSelection {
 
     const block = getBlockIdByNode(node)
 
-    this.setRange(this.#currentRange, block, offset)
-  }
-
-  #setRangeRectangle() {
-    const {
-      config: {
-        containerRect: {
-          x,
-          y,
-        },
-      },
-      schema: { elements },
-      interface: { mainViewer },
-      renderedElements,
-    } = this.#ctx
-
-    const lineHeight = this.#ctx.config.style.lineHeight
-
-    for (const range of this.ranges) {
-      const rectangles: Rectangle[] = []
-      if (EditorSelection.isCollapse(range)) {
-        // 闭合选区无需渲染
-        continue
-      }
-      const { anchorBlock, anchorOffset, focusBlock, focusOffset } = range
-
-      const anchorBlockElement = elements.find(el => el.id === anchorBlock)!
-      const focusBlockElement = elements.find(el => el.id === focusBlock)!
-
-      const startViewLineId = anchorBlockElement.groupIds[0] ?? anchorBlock
-      const endViewLineId = focusBlockElement.groupIds[0] ?? focusBlock
-
-      const startViewLineRenderedElement = renderedElements.find(b => b.id === startViewLineId)!
-      const endViewLineRenderedElement = renderedElements.find(b => b.id === endViewLineId)!
-
-      let { left: startLeft, top: startTop } = getRangePosition(anchorBlock, anchorOffset, mainViewer)
-      let { left: endLeft, top: endTop } = getRangePosition(focusBlock, focusOffset, mainViewer)
-
-      startLeft = startLeft - x
-      startTop = amendTop(startTop - y, startViewLineRenderedElement.y, lineHeight/** @todo - 这个值并不适用所有场景 */, startViewLineRenderedElement.height)
-
-      endLeft = endLeft - x
-      endTop = amendTop(endTop - y, endViewLineRenderedElement.y, lineHeight/** @todo - 这个值并不适用所有场景 */, endViewLineRenderedElement.height)
-
-      if (startTop === endTop) {
-        // 在同一行选取
-        rectangles.push({
-          x: Math.min(startLeft, endLeft),
-          y: startTop,
-          width: Math.abs(startLeft - endLeft),
-          height: startViewLineRenderedElement.lineHeight,
-        })
-      } else {
-        // 跨行选取
-        const startViewLine = mainViewer.querySelector<HTMLElement>(`[data-id="${startViewLineId}"]`)!
-        const endViewLine = mainViewer.querySelector<HTMLElement>(`[data-id="${endViewLineId}"]`)!
-
-        let startViewLineRect = startViewLine.getBoundingClientRect()
-        let endViewLineRect = endViewLine.getBoundingClientRect()
-
-        let start
-        let end
-
-        if (startTop > endTop) {
-          // 交换
-          [startViewLineRect, endViewLineRect] = [endViewLineRect, startViewLineRect]
-          start = {
-            x: endLeft,
-            y: endTop,
-            width: startViewLineRect.width - endLeft,
-            height: startViewLineRect.height,
-          }
-          end = {
-            x: 0,
-            y: startTop,
-            width: startLeft,
-            height: endViewLineRect.height,
-          }
-        } else {
-          start = {
-            x: startLeft,
-            y: startTop,
-            width: startViewLineRect.width - startLeft,
-            height: startViewLineRect.height,
-          }
-          end = {
-            x: 0,
-            y: endTop,
-            width: endLeft,
-            height: endViewLineRect.height,
-          }
-        }
-
-        start.width += 10 // 延长 10px 选择区
-        rectangles.push(start, end)
-
-        const [sIdx, eIdx] = [
-          renderedElements.findIndex(b => b.id === startViewLine.dataset.id),
-          renderedElements.findIndex(b => b.id === endViewLine.dataset.id),
-        ]
-
-        renderedElements
-          .slice(Math.min(sIdx, eIdx) + 1, Math.max(sIdx, eIdx))
-          .map(({ x, y, width, height }) => {
-            rectangles.push({
-              x,
-              y,
-              width: width + 10, // 延长 10px 选择区
-              height,
-            })
-
-            return null
-          })
-      }
-
-      range._rectangles = rectangles
-    }
+    this.setRange(block, offset)
   }
 
   /**
@@ -320,7 +335,7 @@ export class EditorSelection {
     ]
 
     const range = [...this.ranges].find((r) => {
-      return (r._rectangles ?? []).some(rect => isPointInRect({ x: left, y: top }, rect))
+      return (r.rectangles ?? []).some(rect => isPointInRect({ x: left, y: top }, rect))
     })
 
     return range ?? false
@@ -379,45 +394,23 @@ export class EditorSelection {
     }
   }
 
-  #isRangeIntersection(
-    {
-      anchorBlock: anchorBlock1,
-      // anchorOffset: anchorOffset1,
-      focusBlock: focusBlock1,
-      // focusOffset: focusOffset1,
-    }: EditorSelectionRange,
-    {
-      anchorBlock: anchorBlock2,
-      // anchorOffset: anchorOffset2,
-      focusBlock: focusBlock2,
-      // focusOffset: focusOffset2,
-    }: EditorSelectionRange,
-  ) {
-    const {
-      schema: { elements },
-    } = this.#ctx
+  #getIntersectionRanges() {
+    const currentRange = this.#currentRange
+    const ranges = [...this.ranges].filter(r => r !== currentRange)
 
-    let [anchorIdx1, focusIdx1, anchorIdx2, focusIdx2] = Array(4)
+    const currentRectangles = currentRange?.rectangles || []
 
-    let i = elements.length - 1
+    if (currentRectangles.length === 0) return []
 
-    while (i >= 0) {
-      const { id } = elements[i]
-
-      id === anchorBlock1 && (anchorIdx1 = i)
-      id === anchorBlock2 && (anchorIdx2 = i)
-      id === focusBlock1 && (focusIdx1 = i)
-      id === focusBlock2 && (focusIdx2 = i)
-
-      if ([anchorIdx1, focusIdx1, anchorIdx2, focusIdx2].every(v => v !== undefined)) {
-        break
-      }
-      i--
-    }
+    return ranges.filter(({ rectangles }) => {
+      return rectangles?.some(rect => EditorSelection.isRectIntersection(rect, currentRectangles))
+    })
   }
 
-  static isCollapse(range: EditorSelectionRange) {
-    return range.anchorBlock === range.focusBlock
-      && range.anchorOffset === range.focusOffset
+  static isRectIntersection(rect1: Rectangle, rects: Rectangle[]): boolean {
+    return rects.some((rect2) => {
+      return (isRectCross(rect1, rect2) || isRectContainRect(rect1, rect2))
+        && getIntersectionArea(rect1, rect2) > 1
+    })
   }
 }
