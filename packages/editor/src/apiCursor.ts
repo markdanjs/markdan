@@ -19,7 +19,6 @@ function clear() {
 }
 
 function addCursor(blockId: string, offset: number, el: HTMLElement, ctx: MarkdanContext) {
-  const { left, top } = getRangePosition(blockId, offset, el)
   const {
     config: {
       containerRect: {
@@ -29,7 +28,15 @@ function addCursor(blockId: string, offset: number, el: HTMLElement, ctx: Markda
     },
     schema: { elements },
     renderedElements,
+    interface: {
+      scrollbar: {
+        scrollY,
+      },
+    },
   } = ctx
+  const rect = getRangePosition(blockId, offset, el)
+  const { left, top } = rect
+
   const oCursor = document.createElement('div')
   oCursor.classList.add(CLASS_NAMES.editorCursor)
 
@@ -39,7 +46,7 @@ function addCursor(blockId: string, offset: number, el: HTMLElement, ctx: Markda
 
   const element = renderedElements.find(e => e.id === viewLineId)!
 
-  const t = amendTop(top - y, element.y, element.lineHeight, element.height)
+  const t = amendTop(top - y, element.y - scrollY, element.lineHeight, element.height)
 
   oCursor.style.cssText = `left: ${left - x - 1}px; top: ${t}px; height: ${element.lineHeight}px;`
 
@@ -69,9 +76,11 @@ export function createCursorApi(el: HTMLElement, cursorWrapper: HTMLElement, ctx
 
     addCursor: (ranges: Set<EditorSelectionRange>) => {
       clear()
+
       ranges.forEach((range) => {
-        renderRangeRectangles(range)
+        range.setRangeRectangle()
         addCursor(range.focusBlock, range.focusOffset, el, ctx)
+        renderRangeRectangles(range)
       })
     },
   }

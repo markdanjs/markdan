@@ -10,7 +10,7 @@ export interface Rectangle extends Point {
 /**
  * 通过 editor 点击位置，分析选中的 block 位置，以及确定点击的是哪个字符
  */
-export function getBlockPositionByClick(e: MouseEvent, _mode = '?') {
+export function getBlockPositionByClick({ x, y }: Point, _mode = '?') {
   let range
   let textNode: Node
   let offset: number
@@ -18,12 +18,12 @@ export function getBlockPositionByClick(e: MouseEvent, _mode = '?') {
   const doc: Document & Record<string, any> = document
 
   if (doc.caretPositionFromPoint) {
-    range = doc.caretPositionFromPoint(e.clientX, e.clientY)
+    range = doc.caretPositionFromPoint(x, y)
     textNode = range.offsetNode
     offset = range.offset
   } else if (doc.caretRangeFromPoint) {
     // 使用 WebKit 专有回退方法
-    range = doc.caretRangeFromPoint(e.clientX, e.clientY)!
+    range = doc.caretRangeFromPoint(x, y)!
     textNode = range.startContainer
     offset = range.startOffset
   } else {
@@ -71,22 +71,6 @@ export function isRectContainRect({ x: x1, y: y1, width: w1, height: h1 }: Recta
 
 export function getIntersectionArea({ x: x1, y: y1, width: w1, height: h1 }: Rectangle, { x: x2, y: y2, width: w2, height: h2 }: Rectangle) {
   return (Math.min(x1 + w1, x2 + w2) - Math.max(x1, x2)) * (Math.min(y1 + h1, y2 + h2) - Math.max(y1, y2))
-}
-
-export function isMouseMoveOut(el: HTMLElement, e: MouseEvent) {
-  const { x, y, width, height } = el.getBoundingClientRect()
-
-  const { clientX, clientY } = e
-
-  return !isPointInRect({
-    x: clientX,
-    y: clientY,
-  }, {
-    x,
-    y,
-    width,
-    height,
-  })
 }
 
 export function getRangePosition(blockId: string, offset: number, el: HTMLElement) {

@@ -23,6 +23,7 @@ const classNames = [
   'editor-viewer',
   'editor-cursor',
   'editor-range',
+  'editor-scrollbar',
 ] as const
 
 export const CLASS_NAMES = (() => {
