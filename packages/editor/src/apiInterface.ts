@@ -7,9 +7,11 @@ import { CLASS_NAMES } from './config/dom.config'
 import './style.css'
 import { createCursorApi } from './apiCursor'
 import { createRendererApi } from './apiRenderer'
+import { type ScrollBarApi, createScrollbar } from './scrollbar'
 
 export interface MarkdanInterface {
   mainViewer: HTMLElement
+  scrollbar: ScrollBarApi
 }
 
 export interface MarkdanInterfaceStyle {
@@ -70,6 +72,7 @@ export function createEditorInterfaceApi(el: HTMLElement, ctx: MarkdanContext): 
   }, '')
 
   const oCursor = document.createElement('div')
+  const oScrollBar = document.createElement('div')
 
   const oContainer = document.createElement('div')
 
@@ -80,10 +83,19 @@ export function createEditorInterfaceApi(el: HTMLElement, ctx: MarkdanContext): 
 
   const oMainViewer = createMainViewer(ctx)
   const cursor = createCursorApi(oContainer, oCursor, ctx)
+  const scrollbar = createScrollbar(oScrollBar, ctx)
 
   oContainer.appendChild(oCursor)
+  oContainer.appendChild(oScrollBar)
   oContainer.appendChild(oMainViewer)
   el.appendChild(oContainer)
+
+  setTimeout(() => {
+    scrollbar.update(ctx)
+    oContainer.addEventListener('wheel', (e) => {
+      ctx.emitter.emit('editor:scroll', e)
+    })
+  })
 
   const renderer = createRendererApi(oMainViewer, ctx)
 
@@ -92,6 +104,7 @@ export function createEditorInterfaceApi(el: HTMLElement, ctx: MarkdanContext): 
 
   return {
     mainViewer: oMainViewer,
+    scrollbar,
 
     // addCursor(blockId: string, offset: number) {
 

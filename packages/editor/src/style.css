@@ -21,6 +21,9 @@
   --color-secondary: #666;
   --color-cursor: #2d2e30;
   --color-selection: hsla(0, 0%, 44%, 0.2);
+  --color-scrollbar-track: hsla(0, 0%, 88%, 0.3);
+  --color-scrollbar-slider: hsla(0, 0%, 66%, 0.4);
+  --color-scrollbar-slider-active: hsla(0, 0%, 66%, 0.6);
 
   &.dark {
     --color-bg: #272822;
@@ -28,13 +31,17 @@
     --color-secondary: #90908a;
     --color-cursor: #f5f4f4;
     --color-selection: hsla(0, 0%, 100%, 0.2);
+    --color-scrollbar-slider: hsla(0, 0%, 80%, 0.4);
+    --color-scrollbar-slider-active: hsla(0, 0%, 80%, 0.6);
   }
 }
 
 :where(.markdan-editor-viewer) {
   position: absolute;
-  inset: 0;
+  left: 0;
+  top: 0;
   z-index: 10;
+  min-height: 100%;
   cursor: text;
 
   .view-line {
@@ -66,6 +73,70 @@
   height: var(--line-height);
   background-color: var(--color-selection);
   border-radius: 2px;
+}
+
+:where(.markdan-editor-scrollbar) {
+  position: absolute;
+  z-index: 11;
+  --size: 16px;
+
+  .track {
+    position: absolute;
+    inset: 0;
+    box-sizing: border-box;
+  }
+
+  &:hover {
+    .track {
+      background-color: var(--color-scrollbar-track);
+    }
+
+    &.vertical {
+      .track {
+        border-left: 1px solid var(--color-scrollbar-slider);
+      }
+    }
+
+    &.horizontal {
+      .track {
+        border-top: 1px solid var(--color-scrollbar-slider);
+      }
+    }
+  }
+
+  .slider {
+    position: absolute;
+    background-color: var(--color-scrollbar-slider);
+    cursor: pointer;
+
+    &:hover {
+      background-color: var(--color-scrollbar-slider-active);
+    }
+  }
+
+  &.vertical {
+    right: 0;
+    top: 0;
+    width: var(--size);
+    height: 100%;
+
+    .slider {
+      right: 0;
+      width: 100%;
+    }
+  }
+
+  &.horizontal {
+    left: 0;
+    bottom: 0;
+    width: calc(100% - var(--size));
+    height: var(--size);
+
+    .slider {
+      bottom: 0;
+      height: 100%;
+    }
+  }
 }
 
 @keyframes mdOpacityAni {

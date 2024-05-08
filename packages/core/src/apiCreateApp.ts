@@ -24,6 +24,8 @@ export interface MarkdanConfig {
   theme: MarkdanInterfaceTheme
   style: MarkdanInterfaceStyle
   lineNumber: boolean
+  scrollbarSize: number
+  paddingRight: number
 }
 
 export interface MarkdanContext {
@@ -35,6 +37,10 @@ export interface MarkdanContext {
   schema: MarkdanSchema
   emitter: EventEmitter
   interface: MarkdanInterface
+  /**
+   * 获取鼠标在编辑器中的位置
+   */
+  getMousePosition(e: Event): void
 }
 
 export function createAppContext() {
@@ -47,6 +53,8 @@ export function createAppContext() {
     renderedElements: [],
     emitter: new EventEmitter(),
     interface: {} as MarkdanInterface,
+
+    getMousePosition(_e) {},
   }
 
   ctx.selection = new EditorSelection(ctx)
@@ -77,6 +85,8 @@ export function createApp() {
         }, containerRect.width, containerRect.height),
         theme: options.theme ?? initialTheme,
         lineNumber: !!options.lineNumber,
+        scrollbarSize: 16,
+        paddingRight: 16,
       })
 
       // 注册事件处理
@@ -91,6 +101,43 @@ export function createApp() {
       const h2 = ctx.schema.append(ctx.schema.createElement('h2', [], ''))
       const strong = ctx.schema.append(ctx.schema.createElement('strong', [h2.id], 'Strong'))
       ctx.schema.append(ctx.schema.createElement('italic', [h2.id, strong.id], 'Text'))
+      ctx.schema.append(ctx.schema.createElement('paragraph', [], 'mount(el: string | HTMLElement, options: MarkdanInterfaceOptions): void'))
+
+      ctx.schema.append(ctx.schema.createElement('h2', [], 'Heading 3'))
+      ctx.schema.append(ctx.schema.createElement('paragraph', [], 'mount(el: string | HTMLElement, options: MarkdanInterfaceOptions): void'))
+      ctx.schema.append(ctx.schema.createElement('h2', [], 'Heading 4'))
+      ctx.schema.append(ctx.schema.createElement('paragraph', [], 'mount(el: string | HTMLElement, options: MarkdanInterfaceOptions): void'))
+      ctx.schema.append(ctx.schema.createElement('h2', [], 'Heading 5'))
+      ctx.schema.append(ctx.schema.createElement('paragraph', [], 'mount(el: string | HTMLElement, options: MarkdanInterfaceOptions): void'))
+      ctx.schema.append(ctx.schema.createElement('h2', [], 'Heading 2'))
+      ctx.schema.append(ctx.schema.createElement('paragraph', [], 'mount(el: string | HTMLElement, options: MarkdanInterfaceOptions): void'))
+      ctx.schema.append(ctx.schema.createElement('h2', [], 'Heading 2'))
+      ctx.schema.append(ctx.schema.createElement('paragraph', [], 'mount(el: string | HTMLElement, options: MarkdanInterfaceOptions): void'))
+      ctx.schema.append(ctx.schema.createElement('h2', [], 'Heading 2'))
+      ctx.schema.append(ctx.schema.createElement('paragraph', [], 'mount(el: string | HTMLElement, options: MarkdanInterfaceOptions): void'))
+      ctx.schema.append(ctx.schema.createElement('h2', [], 'Heading 2'))
+      ctx.schema.append(ctx.schema.createElement('paragraph', [], 'mount(el: string | HTMLElement, options: MarkdanInterfaceOptions): void'))
+      ctx.schema.append(ctx.schema.createElement('h2', [], 'Heading 2'))
+      ctx.schema.append(ctx.schema.createElement('paragraph', [], 'mount(el: string | HTMLElement, options: MarkdanInterfaceOptions): void'))
+      ctx.schema.append(ctx.schema.createElement('h2', [], 'Heading 2'))
+      ctx.schema.append(ctx.schema.createElement('paragraph', [], 'mount(el: string | HTMLElement, options: MarkdanInterfaceOptions): void'))
+      ctx.schema.append(ctx.schema.createElement('h2', [], 'Heading 2'))
+      ctx.schema.append(ctx.schema.createElement('paragraph', [], 'mount(el: string | HTMLElement, options: MarkdanInterfaceOptions): void'))
+      ctx.schema.append(ctx.schema.createElement('h2', [], 'Heading 2'))
+      ctx.schema.append(ctx.schema.createElement('paragraph', [], 'mount(el: string | HTMLElement, options: MarkdanInterfaceOptions): void'))
+      ctx.schema.append(ctx.schema.createElement('h2', [], 'Heading 2'))
+      ctx.schema.append(ctx.schema.createElement('paragraph', [], 'mount(el: string | HTMLElement, options: MarkdanInterfaceOptions): void'))
+      ctx.schema.append(ctx.schema.createElement('h2', [], 'Heading 2'))
+      ctx.schema.append(ctx.schema.createElement('paragraph', [], 'mount(el: string | HTMLElement, options: MarkdanInterfaceOptions): void'))
+      ctx.schema.append(ctx.schema.createElement('h2', [], 'Heading 2'))
+      ctx.schema.append(ctx.schema.createElement('paragraph', [], 'mount(el: string | HTMLElement, options: MarkdanInterfaceOptions): void'))
+      ctx.schema.append(ctx.schema.createElement('h2', [], 'Heading 2'))
+      ctx.schema.append(ctx.schema.createElement('paragraph', [], 'mount(el: string | HTMLElement, options: MarkdanInterfaceOptions): void'))
+      ctx.schema.append(ctx.schema.createElement('h2', [], 'Heading 2'))
+      ctx.schema.append(ctx.schema.createElement('paragraph', [], 'mount(el: string | HTMLElement, options: MarkdanInterfaceOptions): void'))
+      ctx.schema.append(ctx.schema.createElement('h2', [], 'Heading 2'))
+      ctx.schema.append(ctx.schema.createElement('paragraph', [], 'mount(el: string | HTMLElement, options: MarkdanInterfaceOptions): void'))
+      ctx.schema.append(ctx.schema.createElement('h2', [], 'Heading 2'))
       ctx.schema.append(ctx.schema.createElement('paragraph', [], 'mount(el: string | HTMLElement, options: MarkdanInterfaceOptions): void'))
 
       ctx.emitter.emit('schema:change', ctx.schema)

@@ -1,7 +1,8 @@
 import type { Rectangle } from '@markdan/helper'
-import { amendTop, getBlockIdByNode, getBlockPositionByClick, getIntersectionArea, getModifierKeys, getRangePosition, isMouseMoveOut, isOnlyAltKey, isOnlyShiftKey, isPointInRect, isRectContainRect, isRectCross } from '@markdan/helper'
+import { amendTop, getBlockIdByNode, getBlockPositionByClick, getIntersectionArea, getModifierKeys, isOnlyAltKey, isOnlyShiftKey, isPointInRect, isRectContainRect, isRectCross } from '@markdan/helper'
 import type { MarkdanViewBlock } from '@markdan/engine'
 import type { MarkdanContext } from './apiCreateApp'
+
 export class EditorSelectionRange {
   #ctx: MarkdanContext
   #rectangles: Rectangle[] = []
@@ -14,7 +15,7 @@ export class EditorSelectionRange {
     ctx: MarkdanContext,
   ) {
     this.#ctx = ctx
-    this.#setRangeRectangle()
+    this.setRangeRectangle()
   }
 
   get uid() {
@@ -33,18 +34,18 @@ export class EditorSelectionRange {
   setStart(block: string, offset: number): EditorSelectionRange {
     this.anchorBlock = block
     this.anchorOffset = offset
-    this.#setRangeRectangle()
+    this.setRangeRectangle()
     return this
   }
 
   setEnd(block: string, offset: number): EditorSelectionRange {
     this.focusBlock = block
     this.focusOffset = offset
-    this.#setRangeRectangle()
+    this.setRangeRectangle()
     return this
   }
 
-  #setRangeRectangle() {
+  setRangeRectangle() {
     if (this.isCollapsed) {
       // 闭合选区无需渲染
       return
@@ -58,7 +59,13 @@ export class EditorSelectionRange {
         },
       },
       schema: { elements },
-      interface: { mainViewer },
+      interface: {
+        mainViewer,
+        scrollbar: {
+          scrollX,
+          scrollY,
+        },
+      },
       renderedElements,
     } = this.#ctx
 
@@ -80,14 +87,28 @@ export class EditorSelectionRange {
     const startViewLineRenderedElement = renderedElements.find(b => b.id === startViewLineId)!
     const endViewLineRenderedElement = renderedElements.find(b => b.id === endViewLineId)!
 
-    let { left: startLeft, top: startTop } = getRangePosition(anchorBlock, anchorOffset, mainViewer)
-    let { left: endLeft, top: endTop } = getRangePosition(focusBlock, focusOffset, mainViewer)
+    const anchorDom = mainViewer.querySelector<HTMLElement>(`[data-id="${anchorBlock}"]`)
+    const focusDom = mainViewer.querySelector<HTMLElement>(`[data-id="${focusBlock}"]`)
+
+    if (!anchorDom || !focusDom) {
+      throw new Error('Set range rectangle failed.')
+    }
+    const originalRange = new Range()
+
+    originalRange.setStart(anchorDom.firstChild!, anchorOffset)
+    originalRange.setEnd(anchorDom.firstChild!, anchorOffset)
+
+    let { left: startLeft, top: startTop } = originalRange.getBoundingClientRect()
+
+    originalRange.setStart(focusDom.firstChild!, focusOffset)
+    originalRange.setEnd(focusDom.firstChild!, focusOffset)
+    let { left: endLeft, top: endTop } = originalRange.getBoundingClientRect()
 
     startLeft = startLeft - x
-    startTop = amendTop(startTop - y, startViewLineRenderedElement.y, startViewLineRenderedElement.lineHeight, startViewLineRenderedElement.height)
+    startTop = amendTop(startTop - y, startViewLineRenderedElement.y - scrollY, startViewLineRenderedElement.lineHeight, startViewLineRenderedElement.height)
 
     endLeft = endLeft - x
-    endTop = amendTop(endTop - y, endViewLineRenderedElement.y, endViewLineRenderedElement.lineHeight, endViewLineRenderedElement.height)
+    endTop = amendTop(endTop - y, endViewLineRenderedElement.y - scrollY, endViewLineRenderedElement.lineHeight, endViewLineRenderedElement.height)
 
     if (startTop === endTop) {
       // 在同一行选取
@@ -102,39 +123,52 @@ export class EditorSelectionRange {
       const startViewLine = mainViewer.querySelector<HTMLElement>(`[data-id="${startViewLineId}"]`)!
       const endViewLine = mainViewer.querySelector<HTMLElement>(`[data-id="${endViewLineId}"]`)!
 
-      let startViewLineRect = startViewLine.getBoundingClientRect()
-      let endViewLineRect = endViewLine.getBoundingClientRect()
-
       let start
       let end
 
       if (startTop > endTop) {
-        // 交换
-        [startViewLineRect, endViewLineRect] = [endViewLineRect, startViewLineRect]
+        originalRange.setStart(focusDom.firstChild!, focusOffset)
+        originalRange.setEnd(endViewLine, endViewLine.childNodes.length)
+        const startRect = originalRange.getBoundingClientRect()
+
         start = {
-          x: endLeft,
+          x: startRect.x - x,
           y: endTop,
-          width: startViewLineRect.width - endLeft,
-          height: startViewLineRect.height,
+          width: startRect.width,
+          height: endViewLineRenderedElement.height,
         }
+
+        originalRange.setEnd(anchorDom.firstChild!, anchorOffset)
+        originalRange.setStart(startViewLine, 0)
+        const endRect = originalRange.getBoundingClientRect()
+
         end = {
-          x: 0,
+          x: endRect.x - x,
           y: startTop,
-          width: startLeft,
-          height: endViewLineRect.height,
+          width: endRect.width,
+          height: startViewLineRenderedElement.height,
         }
       } else {
+        originalRange.setStart(anchorDom.firstChild!, anchorOffset)
+        originalRange.setEnd(startViewLine, startViewLine.childNodes.length)
+        const startRect = originalRange.getBoundingClientRect()
+
         start = {
-          x: startLeft,
+          x: startRect.x - x,
           y: startTop,
-          width: startViewLineRect.width - startLeft,
-          height: startViewLineRect.height,
+          width: startRect.width,
+          height: startViewLineRenderedElement.height,
         }
+
+        originalRange.setEnd(focusDom.firstChild!, focusOffset)
+        originalRange.setStart(endViewLine, 0)
+        const endRect = originalRange.getBoundingClientRect()
+
         end = {
-          x: 0,
+          x: endRect.x - x,
           y: endTop,
-          width: endLeft,
-          height: endViewLineRect.height,
+          width: endRect.width,
+          height: endViewLineRenderedElement.height,
         }
       }
 
@@ -150,8 +184,8 @@ export class EditorSelectionRange {
         .slice(Math.min(sIdx, eIdx) + 1, Math.max(sIdx, eIdx))
         .map(({ x, y, width, height }) => {
           rectangles.push({
-            x,
-            y,
+            x: x - scrollX,
+            y: y - scrollY,
             width: width + 10, // 延长 10px 选择区
             height,
           })
@@ -218,13 +252,16 @@ export class EditorSelection {
    *    - 增加一个新选区操作；
    *    - 点击非当前选区时，删除该选区；
    *    - 点击当前选区时，将操作交给 move up，如果发生 move，则重选（以最小位置为起始点）。否则不处理;
-   * 2. 同时按住 alt & shift 键，生成多选区（暂时不做）
+   * 2. 同时按住 alt & shift 键，生成多选区（@todo - 暂时不做）
    * 3. 仅按住 shift 键时，修改当前选区的结束点
    * 4. 无 alt | shift 按键操作时，清空所有选区，新增一个选区
    */
   handleMouseDown(e: MouseEvent) {
     const keys = getModifierKeys(e)
-    const { node, offset } = getBlockPositionByClick(e)
+    const { node, offset } = getBlockPositionByClick({
+      x: e.clientX,
+      y: e.clientY,
+    })
 
     const block = getBlockIdByNode(node)
     if (isOnlyAltKey(keys)) {
@@ -260,7 +297,42 @@ export class EditorSelection {
       return
     }
 
-    if (isMouseMoveOut(this.#ctx.interface.mainViewer, e)) {
+    const {
+      config: {
+        scrollbarSize,
+        containerRect: {
+          x,
+          y,
+          width,
+          height,
+        },
+      },
+    } = this.#ctx
+
+    // 超出编辑器可视区
+    if (
+      !isPointInRect({
+        x: e.clientX,
+        y: e.clientY,
+      }, {
+        x,
+        y,
+        width: width - scrollbarSize,
+        height: height - scrollbarSize,
+      })
+    ) {
+      if (e.clientX > x + width - scrollbarSize) {
+        this.#ctx.interface.scrollbar.scroll(Infinity)
+      } else if (e.clientX < x) {
+        this.#ctx.interface.scrollbar.scroll(0)
+      }
+
+      if (e.clientY > y + height - scrollbarSize) {
+        this.#ctx.interface.scrollbar.vertical.scrollBy(scrollbarSize)
+      } else if (e.clientY < y) {
+        this.#ctx.interface.scrollbar.vertical.scrollBy(-scrollbarSize)
+      }
+
       const { block, offset } = this.#getPositionWhenMouseout(e)
 
       this.setRange(
@@ -268,7 +340,10 @@ export class EditorSelection {
         offset,
       )
     } else {
-      const { node, offset } = getBlockPositionByClick(e)
+      const { node, offset } = getBlockPositionByClick({
+        x: e.clientX,
+        y: e.clientY,
+      })
 
       const block = getBlockIdByNode(node)
 
@@ -299,7 +374,42 @@ export class EditorSelection {
       return
     }
 
-    if (isMouseMoveOut(this.#ctx.interface.mainViewer, e)) {
+    const {
+      config: {
+        scrollbarSize,
+        containerRect: {
+          x,
+          y,
+          width,
+          height,
+        },
+      },
+    } = this.#ctx
+
+    // 超出编辑器可视区
+    if (
+      !isPointInRect({
+        x: e.clientX,
+        y: e.clientY,
+      }, {
+        x,
+        y,
+        width: width - scrollbarSize,
+        height: height - scrollbarSize,
+      })
+    ) {
+      if (e.clientX > x + width - scrollbarSize) {
+        this.#ctx.interface.scrollbar.scroll(Infinity)
+      } else if (e.clientX < x) {
+        this.#ctx.interface.scrollbar.scroll(0)
+      }
+
+      if (e.clientY > y + height - scrollbarSize) {
+        this.#ctx.interface.scrollbar.vertical.scrollBy(scrollbarSize)
+      } else if (e.clientY < y) {
+        this.#ctx.interface.scrollbar.vertical.scrollBy(-scrollbarSize)
+      }
+
       const { block, offset } = this.#getPositionWhenMouseout(e)
 
       this.setRange(
@@ -309,7 +419,10 @@ export class EditorSelection {
       return
     }
 
-    const { node, offset } = getBlockPositionByClick(e)
+    const { node, offset } = getBlockPositionByClick({
+      x: e.clientX,
+      y: e.clientY,
+    })
 
     const block = getBlockIdByNode(node)
 
@@ -327,11 +440,17 @@ export class EditorSelection {
           y,
         },
       },
+      interface: {
+        scrollbar: {
+          scrollX,
+          scrollY,
+        },
+      },
     } = this.#ctx
 
     const [left, top] = [
-      e.clientX - x,
-      e.clientY - y,
+      e.clientX - x - scrollX,
+      e.clientY - y - scrollY,
     ]
 
     const range = [...this.ranges].find((r) => {
@@ -367,12 +486,14 @@ export class EditorSelection {
     let focusBlock: EditorSelectionRange['focusBlock']
     let focusOffset = 0
 
+    const { scrollY } = this.#ctx.interface.scrollbar
+
     if (top < tMin) {
       // 往上选取
-      focusBlock = (renderedElements.find(b => top >= b.y && top <= b.y + b.height) ?? renderedElements[0]).id
+      focusBlock = (renderedElements.find(b => top >= (b.y - scrollY) && top <= (b.y - scrollY) + b.height) ?? renderedElements[0]).id
     } else if (top > tMax) {
       // 往下选取
-      focusBlock = ([...renderedElements].reverse().find(b => top >= b.y && top <= b.y + b.height) ?? renderedElements.at(-1)!).id
+      focusBlock = ([...renderedElements].reverse().find(b => top >= (b.y - scrollY) && top <= (b.y - scrollY) + b.height) ?? renderedElements.at(-1)!).id
     } else {
       // 当前行
       focusBlock = viewLine
