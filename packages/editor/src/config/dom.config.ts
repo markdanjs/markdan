@@ -19,11 +19,14 @@ type DomClassesType<T extends readonly string[] = []> = {
 }
 
 const classNames = [
+  'editor',
+  'editor-main',
   'editor-container',
   'editor-viewer',
   'editor-cursor',
   'editor-range',
   'editor-scrollbar',
+  'editor-line-number',
 ] as const
 
 export const CLASS_NAMES = (() => {
