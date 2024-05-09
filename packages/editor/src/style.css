@@ -1,7 +1,7 @@
-:where(.markdan-editor-container) {
+:where(.markdan-editor) {
+  display: flex;
+  flex-direction: column;
   position: relative;
-  width: var(--width, 100%);
-  height: var(--height, 100%);
   line-height: var(--line-height, 24px);
   font-size: var(--font-size, 16px);
   font-family: var(--font-family, "Courier New", Menlo, Monaco, monospace, Menlo, Monaco, "Courier New", monospace);
@@ -16,6 +16,7 @@
 
   --gap: 20px;
 
+  --color-brand: #0088ff;
   --color-bg: #fff;
   --color-primary: #24292e;
   --color-secondary: #666;
@@ -26,6 +27,7 @@
   --color-scrollbar-slider-active: hsla(0, 0%, 66%, 0.6);
 
   &.dark {
+    --color-brand: #0088ff;
     --color-bg: #272822;
     --color-primary: #ecedee;
     --color-secondary: #90908a;
@@ -34,6 +36,22 @@
     --color-scrollbar-slider: hsla(0, 0%, 80%, 0.4);
     --color-scrollbar-slider-active: hsla(0, 0%, 80%, 0.6);
   }
+
+  .markdan-editor-main {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+  }
+}
+
+:where(.markdan-editor-container) {
+  flex: 1;
+  position: relative;
+  width: var(--width, 100%);
+  height: var(--height, 100%);
+  min-width: 0;
+  user-select: none;
+  overflow: hidden;
 }
 
 :where(.markdan-editor-viewer) {
@@ -135,6 +153,44 @@
     .slider {
       bottom: 0;
       height: 100%;
+    }
+  }
+}
+
+:where(.markdan-editor-line-number) {
+  height: 100%;
+  padding: 0 16px;
+  background-color: var(--color-bg);
+
+  .wrapper {
+    position: relative;
+    min-width: 3ch;
+    height: 100%;
+
+    > span {
+      display: block;
+      position: absolute;
+      right: 0;
+      text-align: right;
+      font-size: var(--font-size);
+      color: var(--color-secondary);
+
+      &.active {
+        position: relative;
+        color: var(--color-primary);
+
+        &::after {
+          content: '';
+          position: absolute;
+          right: -8px;
+          top: 50%;
+          width: 4px;
+          height: 4px;
+          border-radius: 100%;
+          background-color: var(--color-brand);
+          transform: translateY(-50%);
+        }
+      }
     }
   }
 }

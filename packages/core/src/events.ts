@@ -50,6 +50,7 @@ export function registerEventHandler(ctx: MarkdanContext) {
 
   function handleScrollBarChange(_position: number, type: ScrollBarType) {
     ctx.interface.mainViewer.style.transform = `translate(-${ctx.interface.scrollbar.scrollX}px, -${ctx.interface.scrollbar.scrollY}px)`
+    ctx.interface.lineNumber.lineNumberWrapper.style.transform = `translate(0, -${ctx.interface.scrollbar.scrollY}px)`
 
     if (type === 'vertical') {
       // @todo - 更新DOM渲染内容

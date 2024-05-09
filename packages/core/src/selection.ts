@@ -214,6 +214,25 @@ export class EditorSelection {
     return this.#ranges
   }
 
+  get focusViewLine() {
+    const currentRange = this.#currentRange
+    if (!currentRange) {
+      return undefined
+    }
+    const element = this.#ctx.schema.elements.find(e => e.id === currentRange.focusBlock)
+
+    if (!element) {
+      return undefined
+    }
+
+    return element.groupIds?.[0] ?? element.id
+  }
+
+  get isOnlyOneCollapsedRange() {
+    const ranges = [...this.ranges]
+    return ranges.length === 1 && ranges[0].isCollapsed
+  }
+
   addRange(
     anchorBlock: EditorSelectionRange['anchorBlock'],
     anchorOffset: EditorSelectionRange['anchorOffset'],

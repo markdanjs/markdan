@@ -8,10 +8,12 @@ import './style.css'
 import { createCursorApi } from './apiCursor'
 import { createRendererApi } from './apiRenderer'
 import { type ScrollBarApi, createScrollbar } from './scrollbar'
+import { type LineNumberAPI, createLineNumber } from './lineNumber'
 
 export interface MarkdanInterface {
   mainViewer: HTMLElement
   scrollbar: ScrollBarApi
+  lineNumber: LineNumberAPI
 }
 
 export interface MarkdanInterfaceStyle {
@@ -66,45 +68,74 @@ function createMainViewer(ctx: MarkdanContext) {
   return oMainViewer
 }
 
+/**
+ * ```markdown
+ * markdan
+ *  - toolbar
+ *  - main
+ *    - line-number
+ *    - container
+ *      - cursor
+ *      - scrollbar
+ *  - footer?
+ * ```
+ */
 export function createEditorInterfaceApi(el: HTMLElement, ctx: MarkdanContext): MarkdanInterface {
   const cssText = Object.entries(ctx.config.style).reduce((acc, curr) => {
     return `${acc}--${curr[0].replace(/[A-Z]/, $1 => `-${$1.toLowerCase()}`)}: ${typeof curr[1] === 'string' ? curr[1] : `${curr[1]}px`};`
   }, '')
-
   const oCursor = document.createElement('div')
   const oScrollBar = document.createElement('div')
 
   const oContainer = document.createElement('div')
+  oContainer.classList.add(CLASS_NAMES.editorContainer)
 
-  oContainer.classList.add(CLASS_NAMES.editorContainer, ctx.config.theme)
-  oContainer.style.cssText = cssText
+  const oMain = document.createElement('main')
+  oMain.className = CLASS_NAMES.editorMain
+
+  const oMarkdan = document.createElement('div')
+  oMarkdan.classList.add(CLASS_NAMES.editor, ctx.config.theme)
+  oMarkdan.style.cssText = cssText
 
   // const _options = Object.assign({}, options)
 
   const oMainViewer = createMainViewer(ctx)
   const cursor = createCursorApi(oContainer, oCursor, ctx)
   const scrollbar = createScrollbar(oScrollBar, ctx)
+  const lineNumber = createLineNumber(ctx)
 
   oContainer.appendChild(oCursor)
   oContainer.appendChild(oScrollBar)
   oContainer.appendChild(oMainViewer)
-  el.appendChild(oContainer)
+
+  lineNumber.mount(oMain)
+  oMain.appendChild(oContainer)
+
+  oMarkdan.appendChild(oMain)
+
+  el.appendChild(oMarkdan)
 
   setTimeout(() => {
     scrollbar.update(ctx)
-    oContainer.addEventListener('wheel', (e) => {
+    oMain.addEventListener('wheel', (e) => {
       ctx.emitter.emit('editor:scroll', e)
     })
+    lineNumber.update()
   })
 
   const renderer = createRendererApi(oMainViewer, ctx)
 
+  // 更新容器位置尺寸信息
+  ctx.config.containerRect = oContainer.getBoundingClientRect()
+
   ctx.emitter.on('selection:change', cursor.addCursor)
+  ctx.emitter.on('selection:change', lineNumber.setActive)
   ctx.emitter.on('render', renderer.render)
 
   return {
     mainViewer: oMainViewer,
     scrollbar,
+    lineNumber,
 
     // addCursor(blockId: string, offset: number) {
 
