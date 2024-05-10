@@ -22,6 +22,8 @@ const classNames = [
   'editor',
   'editor-main',
   'editor-container',
+  'editor-toolbar',
+  'editor-footer',
   'editor-viewer',
   'editor-cursor',
   'editor-range',

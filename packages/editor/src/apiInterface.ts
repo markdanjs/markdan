@@ -68,6 +68,16 @@ function createMainViewer(ctx: MarkdanContext) {
   return oMainViewer
 }
 
+function initObserver(elements: Element[], callback?: (...args: any[]) => any) {
+  const observer = new ResizeObserver((_entries) => {
+    callback && callback()
+  })
+
+  elements.forEach((el) => {
+    observer.observe(el)
+  })
+}
+
 /**
  * ```markdown
  * markdan
@@ -90,12 +100,18 @@ export function createEditorInterfaceApi(el: HTMLElement, ctx: MarkdanContext): 
   const oContainer = document.createElement('div')
   oContainer.classList.add(CLASS_NAMES.editorContainer)
 
+  const oToolbar = document.createElement('header')
+  oToolbar.className = CLASS_NAMES.editorToolbar
+
   const oMain = document.createElement('main')
   oMain.className = CLASS_NAMES.editorMain
 
   const oMarkdan = document.createElement('div')
   oMarkdan.classList.add(CLASS_NAMES.editor, ctx.config.theme)
   oMarkdan.style.cssText = cssText
+
+  const oFooter = document.createElement('footer')
+  oFooter.className = CLASS_NAMES.editorFooter
 
   // const _options = Object.assign({}, options)
 
@@ -111,9 +127,15 @@ export function createEditorInterfaceApi(el: HTMLElement, ctx: MarkdanContext): 
   lineNumber.mount(oMain)
   oMain.appendChild(oContainer)
 
+  oToolbar.innerHTML = '<div style="width: 24px; height: 24px;">x</div>'
+  oFooter.innerHTML = '<div>字符数</div>'
+
+  oMarkdan.appendChild(oToolbar)
   oMarkdan.appendChild(oMain)
+  oMarkdan.appendChild(oFooter)
 
   el.appendChild(oMarkdan)
+  el.style.overflow = 'hidden'
 
   setTimeout(() => {
     scrollbar.update(ctx)
@@ -127,6 +149,29 @@ export function createEditorInterfaceApi(el: HTMLElement, ctx: MarkdanContext): 
 
   // 更新容器位置尺寸信息
   ctx.config.containerRect = oContainer.getBoundingClientRect()
+  initObserver([document.documentElement, el], () => {
+    // 更新容器位置尺寸信息
+    const containerRect = ctx.config.containerRect = oContainer.getBoundingClientRect()
+
+    const {
+      config: {
+        style,
+        originalOptions,
+      },
+    } = ctx
+
+    const width = originalOptions.style?.width ?? style.width
+    const height = originalOptions.style?.height ?? style.height
+    const newStyle = ctx.config.style = normalizeStyle({
+      ...style,
+      width,
+      height,
+    }, containerRect.width, containerRect.height)
+
+    oMarkdan.style.cssText = Object.entries(newStyle).reduce((acc, curr) => {
+      return `${acc}--${curr[0].replace(/[A-Z]/, $1 => `-${$1.toLowerCase()}`)}: ${typeof curr[1] === 'string' ? curr[1] : `${curr[1]}px`};`
+    }, '')
+  })
 
   ctx.emitter.on('selection:change', cursor.addCursor)
   ctx.emitter.on('selection:change', lineNumber.setActive)
@@ -136,9 +181,5 @@ export function createEditorInterfaceApi(el: HTMLElement, ctx: MarkdanContext): 
     mainViewer: oMainViewer,
     scrollbar,
     lineNumber,
-
-    // addCursor(blockId: string, offset: number) {
-
-    // },
   } as MarkdanInterface
 }
