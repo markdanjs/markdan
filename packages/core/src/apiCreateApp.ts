@@ -23,6 +23,7 @@ export interface MarkdanConfig {
   containerRect: DOMRect
   theme: MarkdanInterfaceTheme
   style: MarkdanInterfaceStyle
+  originalOptions: DeepPartialObject<MarkdanInterfaceOptions>
   lineNumber: boolean
   scrollbarSize: number
   paddingRight: number
@@ -83,11 +84,12 @@ export function createApp() {
           ...initialStyle,
           ...options.style,
         }, containerRect.width, containerRect.height),
+        originalOptions: options,
         theme: options.theme ?? initialTheme,
         lineNumber: !!options.lineNumber,
         scrollbarSize: 16,
         paddingRight: 16,
-      })
+      } as MarkdanConfig)
 
       // 注册事件处理
       registerEventHandler(ctx)
