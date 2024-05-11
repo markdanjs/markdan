@@ -4,6 +4,13 @@ import type { Point } from '@markdan/helper'
 import type { MarkdanContext } from './index'
 
 export function registerEventHandler(ctx: MarkdanContext) {
+  function handleKeydown(e: KeyboardEvent) {
+    const { key } = e
+    if (key === 'Backspace') {
+      ctx.command.executeCommand('delete')
+    }
+  }
+
   function handleMouseDown(e: MouseEvent) {
     ctx.selection.handleMouseDown(e)
 
@@ -66,6 +73,7 @@ export function registerEventHandler(ctx: MarkdanContext) {
 
   ctx.emitter.on('editor:mouse:down', handleMouseDown)
   ctx.emitter.on('editor:mouse:up', handleMouseUp)
+  ctx.emitter.on('editor:keydown', handleKeydown)
 
   ctx.emitter.on('editor:scroll', handleEditorScroll)
   ctx.emitter.on('scrollbar:change', handleScrollBarChange)

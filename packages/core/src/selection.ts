@@ -31,6 +31,72 @@ export class EditorSelectionRange {
       && this.anchorOffset === this.focusOffset
   }
 
+  /**
+   * 闭合选区，删除选区中的内容，并更新选区位置
+   */
+  collapse() {
+    const {
+      schema: {
+        elements,
+      },
+      emitter,
+    } = this.#ctx
+
+    let anchorIdx = elements.findIndex(el => el.id === this.anchorBlock)
+    let focusIdx = elements.findIndex(el => el.id === this.focusBlock)
+    let { anchorBlock, anchorOffset, focusBlock, focusOffset } = this
+
+    if (anchorIdx === focusIdx) {
+      const element = elements[anchorIdx]
+      elements.splice(anchorIdx, 1, {
+        ...element,
+        content: element.content.slice(0, Math.min(anchorOffset, focusOffset)) + element.content.slice(Math.max(anchorOffset, focusOffset)),
+      })
+      emitter.emit('schema:change', this.#ctx.schema)
+
+      this.setEnd(this.anchorBlock, anchorOffset)
+      emitter.emit('selection:change', this.#ctx.selection.ranges)
+
+      return
+    }
+
+    if (anchorIdx > focusIdx) {
+      [anchorIdx, focusIdx] = [focusIdx, anchorIdx];
+      [anchorBlock, focusBlock] = [focusBlock, anchorBlock];
+      [anchorOffset, focusOffset] = [focusOffset, anchorOffset]
+    }
+
+    const anchorElement = elements[anchorIdx]
+    const focusElement = elements[focusIdx]
+
+    // 删掉 [anchor, focus] 区间中的所有 element
+    // 补充一个新拼接好的 element
+    // 更新 focus view-line 中，后面所有的 elements 的 groupIds
+    const anchorParentId = anchorElement.groupIds?.[0] ?? anchorElement.id
+    const focusParentId = focusElement.groupIds?.[0] ?? focusElement.id
+    const tailElements = elements.filter((el, index) => focusParentId === el.groupIds[0] && index > focusIdx)
+    tailElements.forEach((el) => {
+      el.groupIds = [...new Set(el.groupIds.map((id) => {
+        return id === focusParentId
+          ? anchorParentId
+          : id === focusElement.id
+            ? anchorElement.id
+            : id
+      }))]
+    })
+    elements.splice(Math.max(0, anchorIdx - 1), focusIdx - Math.max(0, anchorIdx - 1) + 1, {
+      ...anchorElement,
+      content: anchorElement.content.slice(0, anchorOffset) + focusElement.content.slice(focusOffset),
+    })
+
+    emitter.emit('schema:change', this.#ctx.schema)
+
+    this.anchorBlock = this.focusBlock = anchorBlock
+    this.anchorOffset = this.focusOffset = anchorOffset
+    this.setRangeRectangle()
+    emitter.emit('selection:change', this.#ctx.selection.ranges)
+  }
+
   setStart(block: string, offset: number): EditorSelectionRange {
     this.anchorBlock = block
     this.anchorOffset = offset
@@ -48,6 +114,7 @@ export class EditorSelectionRange {
   setRangeRectangle() {
     if (this.isCollapsed) {
       // 闭合选区无需渲染
+      this.#rectangles = []
       return
     }
 

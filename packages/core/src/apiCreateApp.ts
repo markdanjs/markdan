@@ -8,6 +8,8 @@ import EventEmitter from './emitter'
 import { registerEventHandler } from './events'
 import type { MarkdanSchema } from './schema'
 import { createSchemaApi } from './schema'
+import type { MarkdanCommand } from './command'
+import { createCommandApi, deleteContentCommand } from './command'
 
 export interface Markdan {
   version: string
@@ -38,10 +40,7 @@ export interface MarkdanContext {
   schema: MarkdanSchema
   emitter: EventEmitter
   interface: MarkdanInterface
-  /**
-   * 获取鼠标在编辑器中的位置
-   */
-  getMousePosition(e: Event): void
+  command: MarkdanCommand
 }
 
 export function createAppContext() {
@@ -54,11 +53,15 @@ export function createAppContext() {
     renderedElements: [],
     emitter: new EventEmitter(),
     interface: {} as MarkdanInterface,
-
-    getMousePosition(_e) {},
+    command: {} as MarkdanCommand,
   }
 
   ctx.selection = new EditorSelection(ctx)
+  const command = createCommandApi(ctx)
+
+  command.registerCommand('delete', deleteContentCommand)
+
+  ctx.command = command
 
   return ctx
 }
