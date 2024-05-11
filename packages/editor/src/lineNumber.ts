@@ -42,6 +42,8 @@ export function createLineNumber(ctx: MarkdanContext): LineNumberAPI {
     },
 
     render() {
+      // @todo - 清理 DOM
+      oLineNumberWrapper.innerHTML = ''
       const oFrag = document.createDocumentFragment()
       ctx.renderedElements.map((element, index) => {
         const oNumber = document.createElement('span')

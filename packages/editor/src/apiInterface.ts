@@ -142,6 +142,9 @@ export function createEditorInterfaceApi(el: HTMLElement, ctx: MarkdanContext): 
     oMain.addEventListener('wheel', (e) => {
       ctx.emitter.emit('editor:scroll', e)
     })
+    document.addEventListener('keydown', (e) => {
+      ctx.emitter.emit('editor:keydown', e)
+    })
     lineNumber.update()
   })
 
@@ -175,7 +178,11 @@ export function createEditorInterfaceApi(el: HTMLElement, ctx: MarkdanContext): 
 
   ctx.emitter.on('selection:change', cursor.addCursor)
   ctx.emitter.on('selection:change', lineNumber.setActive)
-  ctx.emitter.on('render', renderer.render)
+  ctx.emitter.on('render', (blocks) => {
+    renderer.render(blocks)
+    scrollbar.update(ctx)
+    lineNumber.update()
+  })
 
   return {
     mainViewer: oMainViewer,

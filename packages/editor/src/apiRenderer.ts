@@ -5,6 +5,8 @@ import { parseRenderedElement } from 'packages/engine/src/render'
 export function createRendererApi(el: HTMLElement, ctx: MarkdanContext) {
   return {
     render(_blocks: MarkdanViewBlock[]) {
+      // @todo - 清除 HTML
+      el.innerHTML = ''
       const domMapper = new Map([['root', el]])
       const viewLineElements = new Map<string, HTMLElement>()
       ctx.schema.elements.map((element) => {
