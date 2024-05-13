@@ -80,12 +80,33 @@ export function getRangePosition(blockId: string, offset: number, el: HTMLElemen
     throw new Error(`Cannot find node by block id(${blockId})`)
   }
 
+  if ((n.firstChild?.textContent?.length ?? 0) === 0) {
+    // 兼容空行
+    return n.getBoundingClientRect()
+  }
   const range = new Range()
-
   range.setStart(n.firstChild!, offset)
   range.setEnd(n.firstChild!, offset)
-
   return range.getBoundingClientRect()
+}
+
+export function setOriginalRange(range: Range, el: HTMLElement, offset: number, position: 'Both' | 'Start' | 'End' = 'Both') {
+  if ((el.firstChild?.textContent?.length ?? 0) === 0) {
+    if (position === 'Both') {
+      range.setStart(el, 0)
+      range.setEnd(el, 0)
+    } else {
+      (range as any)[`set${position}`](el, 0)
+    }
+  } else {
+    if (position === 'Both') {
+      range.setStart(el.firstChild!, offset)
+      range.setEnd(el.firstChild!, offset)
+    } else {
+      (range as any)[`set${position}`](el.firstChild!, offset)
+    }
+  }
+  return range
 }
 
 /**

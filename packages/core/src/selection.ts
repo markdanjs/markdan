@@ -1,5 +1,5 @@
 import type { Rectangle } from '@markdan/helper'
-import { amendTop, getBlockIdByNode, getBlockPositionByClick, getIntersectionArea, getModifierKeys, isOnlyAltKey, isOnlyShiftKey, isPointInRect, isRectContainRect, isRectCross } from '@markdan/helper'
+import { amendTop, getBlockIdByNode, getBlockPositionByClick, getIntersectionArea, getModifierKeys, isOnlyAltKey, isOnlyShiftKey, isPointInRect, isRectContainRect, isRectCross, setOriginalRange } from '@markdan/helper'
 import type { MarkdanViewBlock } from '@markdan/engine'
 import type { MarkdanContext } from './apiCreateApp'
 
@@ -91,9 +91,7 @@ export class EditorSelectionRange {
 
     emitter.emit('schema:change', this.#ctx.schema)
 
-    this.anchorBlock = this.focusBlock = anchorBlock
-    this.anchorOffset = this.focusOffset = anchorOffset
-    this.setRangeRectangle()
+    this.setRange(anchorBlock, anchorOffset, anchorBlock, anchorOffset)
     emitter.emit('selection:change', this.#ctx.selection.ranges)
   }
 
@@ -107,6 +105,15 @@ export class EditorSelectionRange {
   setEnd(block: string, offset: number): EditorSelectionRange {
     this.focusBlock = block
     this.focusOffset = offset
+    this.setRangeRectangle()
+    return this
+  }
+
+  setRange(anchorBlock: string, anchorOffset: number, focusBlock: string, focusOffset: number): EditorSelectionRange {
+    this.anchorBlock = anchorBlock
+    this.anchorOffset = anchorOffset
+    this.focusBlock = focusBlock
+    this.focusOffset = focusOffset
     this.setRangeRectangle()
     return this
   }
@@ -162,14 +169,32 @@ export class EditorSelectionRange {
     }
     const originalRange = new Range()
 
-    originalRange.setStart(anchorDom.firstChild!, anchorOffset)
-    originalRange.setEnd(anchorDom.firstChild!, anchorOffset)
+    setOriginalRange(originalRange, anchorDom, anchorOffset)
+    // if ((anchorDom.firstChild?.textContent?.length ?? 0) === 0) {
+    //   originalRange.setStart(anchorDom, 0)
+    //   originalRange.setEnd(anchorDom, 0)
+    // } else {
+    //   originalRange.setStart(anchorDom.firstChild!, anchorOffset)
+    //   originalRange.setEnd(anchorDom.firstChild!, anchorOffset)
+    // }
 
-    let { left: startLeft, top: startTop } = originalRange.getBoundingClientRect()
+    let { left: startLeft, top: startTop } = (anchorDom.firstChild?.textContent?.length ?? 0) === 0
+      ? anchorDom.getBoundingClientRect()
+      : originalRange.getBoundingClientRect()
 
-    originalRange.setStart(focusDom.firstChild!, focusOffset)
-    originalRange.setEnd(focusDom.firstChild!, focusOffset)
-    let { left: endLeft, top: endTop } = originalRange.getBoundingClientRect()
+    setOriginalRange(originalRange, focusDom, focusOffset)
+    // if ((focusDom.firstChild?.textContent?.length ?? 0) === 0) {
+    //   originalRange.setStart(focusDom, 0)
+    //   originalRange.setEnd(focusDom, 0)
+    // } else {
+    //   originalRange.setStart(focusDom.firstChild!, focusOffset)
+    //   originalRange.setEnd(focusDom.firstChild!, focusOffset)
+    // }
+    // originalRange.setStart(focusDom.firstChild!, focusOffset)
+    // originalRange.setEnd(focusDom.firstChild!, focusOffset)
+    let { left: endLeft, top: endTop } = (focusDom.firstChild?.textContent?.length ?? 0) === 0
+      ? focusDom.getBoundingClientRect()
+      : originalRange.getBoundingClientRect()
 
     startLeft = startLeft - x
     startTop = amendTop(startTop - y, startViewLineRenderedElement.y - scrollY, startViewLineRenderedElement.lineHeight, startViewLineRenderedElement.height)
@@ -194,9 +219,12 @@ export class EditorSelectionRange {
       let end
 
       if (startTop > endTop) {
-        originalRange.setStart(focusDom.firstChild!, focusOffset)
+        setOriginalRange(originalRange, focusDom, focusOffset, 'Start')
+        // originalRange.setStart(focusDom.firstChild!, focusOffset)
         originalRange.setEnd(endViewLine, endViewLine.childNodes.length)
-        const startRect = originalRange.getBoundingClientRect()
+        const startRect = (focusDom.firstChild?.textContent?.length ?? 0) === 0
+          ? focusDom.getBoundingClientRect()
+          : originalRange.getBoundingClientRect()
 
         start = {
           x: startRect.x - x,
@@ -205,9 +233,12 @@ export class EditorSelectionRange {
           height: endViewLineRenderedElement.height,
         }
 
-        originalRange.setEnd(anchorDom.firstChild!, anchorOffset)
+        setOriginalRange(originalRange, anchorDom, anchorOffset, 'End')
+        // originalRange.setEnd(anchorDom.firstChild!, anchorOffset)
         originalRange.setStart(startViewLine, 0)
-        const endRect = originalRange.getBoundingClientRect()
+        const endRect = (anchorDom.firstChild?.textContent?.length ?? 0) === 0
+          ? anchorDom.getBoundingClientRect()
+          : originalRange.getBoundingClientRect()
 
         end = {
           x: endRect.x - x,
@@ -216,9 +247,12 @@ export class EditorSelectionRange {
           height: startViewLineRenderedElement.height,
         }
       } else {
-        originalRange.setStart(anchorDom.firstChild!, anchorOffset)
+        setOriginalRange(originalRange, anchorDom, anchorOffset, 'Start')
+        // originalRange.setStart(anchorDom.firstChild!, anchorOffset)
         originalRange.setEnd(startViewLine, startViewLine.childNodes.length)
-        const startRect = originalRange.getBoundingClientRect()
+        const startRect = (anchorDom.firstChild?.textContent?.length ?? 0) === 0
+          ? anchorDom.getBoundingClientRect()
+          : originalRange.getBoundingClientRect()
 
         start = {
           x: startRect.x - x,
@@ -227,9 +261,12 @@ export class EditorSelectionRange {
           height: startViewLineRenderedElement.height,
         }
 
-        originalRange.setEnd(focusDom.firstChild!, focusOffset)
+        setOriginalRange(originalRange, focusDom, focusOffset, 'End')
+        // originalRange.setEnd(focusDom.firstChild!, focusOffset)
         originalRange.setStart(endViewLine, 0)
-        const endRect = originalRange.getBoundingClientRect()
+        const endRect = (focusDom.firstChild?.textContent?.length ?? 0) === 0
+          ? focusDom.getBoundingClientRect()
+          : originalRange.getBoundingClientRect()
 
         end = {
           x: endRect.x - x,
@@ -239,7 +276,8 @@ export class EditorSelectionRange {
         }
       }
 
-      start.width += 10 // 延长 10px 选择区
+      start.width = Math.max(10, start.width + 10) // 延长 10px 选择区
+      end.width = Math.max(10, end.width)
       rectangles.push(start, end)
 
       const [sIdx, eIdx] = [

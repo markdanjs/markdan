@@ -35,6 +35,7 @@ function addCursor(blockId: string, offset: number, el: HTMLElement, ctx: Markda
     },
   } = ctx
   const { left, top } = getRangePosition(blockId, offset, el)
+  // console.log(getRangePosition(blockId, offset, el))
 
   const oCursor = document.createElement('div')
   oCursor.classList.add(CLASS_NAMES.editorCursor)
