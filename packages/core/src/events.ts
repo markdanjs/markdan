@@ -6,8 +6,15 @@ import type { MarkdanContext } from './index'
 export function registerEventHandler(ctx: MarkdanContext) {
   function handleKeydown(e: KeyboardEvent) {
     const { key } = e
-    if (key === 'Backspace') {
-      ctx.command.executeCommand('delete')
+    switch (key) {
+      case 'Backspace':
+        ctx.command.executeCommand('delete')
+        break
+      case 'Enter':
+        ctx.command.executeCommand('break-line')
+        break
+      default:
+        break
     }
   }
 

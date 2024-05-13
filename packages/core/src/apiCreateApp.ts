@@ -9,7 +9,7 @@ import { registerEventHandler } from './events'
 import type { MarkdanSchema } from './schema'
 import { createSchemaApi } from './schema'
 import type { MarkdanCommand } from './command'
-import { createCommandApi, deleteContentCommand } from './command'
+import { breakLineCommand, createCommandApi, deleteContentCommand } from './command'
 
 export interface Markdan {
   version: string
@@ -60,6 +60,7 @@ export function createAppContext() {
   const command = createCommandApi(ctx)
 
   command.registerCommand('delete', deleteContentCommand)
+  command.registerCommand('break-line', breakLineCommand)
 
   ctx.command = command
 

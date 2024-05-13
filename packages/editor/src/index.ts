@@ -7,4 +7,6 @@ export {
   normalizeStyle,
 } from './apiInterface'
 
+export { getValue } from './apiRenderer'
+
 export * from './config/editor.config'

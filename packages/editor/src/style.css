@@ -88,6 +88,11 @@
 
   .view-line {
     width: max-content;
+
+    &:empty::after,
+    :empty::after {
+      content: '\200B'
+    }
   }
 
   * {
