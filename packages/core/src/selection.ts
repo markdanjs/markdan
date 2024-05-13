@@ -84,7 +84,7 @@ export class EditorSelectionRange {
             : id
       }))]
     })
-    elements.splice(Math.max(0, anchorIdx - 1), focusIdx - Math.max(0, anchorIdx - 1) + 1, {
+    elements.splice(anchorIdx, focusIdx - anchorIdx + 1, {
       ...anchorElement,
       content: anchorElement.content.slice(0, anchorOffset) + focusElement.content.slice(focusOffset),
     })
