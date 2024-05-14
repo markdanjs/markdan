@@ -10,6 +10,7 @@ import type { MarkdanSchema } from './schema'
 import { createSchemaApi } from './schema'
 import type { MarkdanCommand } from './command'
 import { breakLineCommand, createCommandApi, deleteContentCommand } from './command'
+import { type MarkdanPlugin, createPluginApi } from './plugin'
 
 export interface Markdan {
   version: string
@@ -41,6 +42,7 @@ export interface MarkdanContext {
   emitter: EventEmitter
   interface: MarkdanInterface
   command: MarkdanCommand
+  plugin: MarkdanPlugin
 }
 
 export function createAppContext() {
@@ -54,15 +56,18 @@ export function createAppContext() {
     emitter: new EventEmitter(),
     interface: {} as MarkdanInterface,
     command: {} as MarkdanCommand,
+    plugin: {} as MarkdanPlugin,
   }
 
   ctx.selection = new EditorSelection(ctx)
   const command = createCommandApi(ctx)
+  const plugin = createPluginApi(ctx)
 
   command.registerCommand('delete', deleteContentCommand)
   command.registerCommand('break-line', breakLineCommand)
 
   ctx.command = command
+  ctx.plugin = plugin
 
   return ctx
 }
@@ -73,7 +78,7 @@ export function createApp() {
   // @todo parseDataSource => schema.elements
 
   return {
-    use() {},
+    use: ctx.plugin.install,
     mount(el: string | HTMLElement, options: DeepPartialObject<MarkdanInterfaceOptions> = {}) {
       const oEl = typeof el === 'string' ? document.querySelector<HTMLElement>(el) : el
 
