@@ -125,3 +125,37 @@ export function amendTop(top: number, viewLineTop: number, lineHeight: number | 
 
   return vTop
 }
+
+export function createElement<T extends null = null> (tagName: T, props: null, children: Array<string | Text | HTMLElement | DocumentFragment>): Text
+export function createElement<T extends (keyof HTMLElementTagNameMap)> (tagName: T, props: null | Record<string, string | boolean>, children?: Array<string | Text | HTMLElement | DocumentFragment>): HTMLElementTagNameMap[T]
+export function createElement<T extends(keyof HTMLElementTagNameMap) | null> (
+  tagName: null | T,
+  props: null | Record<string, string | boolean>,
+  children: Array<string | Text | HTMLElement | DocumentFragment> = [],
+) {
+  if (!tagName && !children?.[0]) {
+    throw new TypeError(`"tagName" expect a HTMLElementTagName, but got "${tagName!}"`)
+  }
+
+  if (!tagName) {
+    return document.createTextNode(children[0] as string)
+  }
+
+  const el = document.createElement(tagName)
+
+  if (props) {
+    Object.entries(props).forEach(([key, value]) => {
+      el.setAttribute(key, value as string)
+    })
+  }
+
+  children?.forEach((child) => {
+    if (typeof child === 'string') {
+      el.appendChild(document.createTextNode(child))
+    } else {
+      el.appendChild(child)
+    }
+  })
+
+  return el
+}
