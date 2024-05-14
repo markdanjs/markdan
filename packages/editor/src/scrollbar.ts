@@ -1,22 +1,24 @@
 import type { MarkdanContext } from '@markdan/core'
+import { createElement } from '@markdan/helper'
 import { CLASS_NAMES } from './config/dom.config'
 
 export type ScrollBarType =
   | 'horizontal' // 水平滚动条，当设置自动换行时，不会出现
   | 'vertical' // 垂直滚动条
 
-export interface ScrollBarApi {
+export interface EditorScrollBarApi {
   vertical: ScrollBar
   horizontal: ScrollBar
   readonly scrollX: number
   readonly scrollY: number
-  scroll(x: number, y?: number): void
-  scrollBy(x: number, y?: number): void
+  scroll(x?: number, y?: number): void
+  scrollBy(x?: number, y?: number): void
   update(ctx?: MarkdanContext): void
 }
 
 export class ScrollBar {
   #ctx: MarkdanContext
+  el: HTMLElement | null = null
 
   visible = false
   isRendered = false
@@ -49,9 +51,10 @@ export class ScrollBar {
   /** 滑块位置 */
   get sliderPosition() {
     return Math.max(0, Math.min(
-      this.type === 'vertical'
-        ? this.#visualLength - this.sliderSize
-        : this.#visualLength - this.sliderSize - 16,
+      // this.type === 'vertical'
+      //   ? this.#visualLength - this.sliderSize
+      //   : this.#visualLength - this.sliderSize - 16,
+      this.#visualLength - this.sliderSize,
       this.currentPosition * this.#visualLength / this.#contentLength),
     )
   }
@@ -67,8 +70,6 @@ export class ScrollBar {
     if (this.slider) {
       this.slider.style.transform = `${this.type === 'vertical' ? 'translateY' : 'translateX'}(${this.sliderPosition}px)`
     }
-
-    this.#ctx.emitter.emit('scrollbar:change', this.currentPosition, this.type)
   }
 
   render(el: HTMLElement) {
@@ -76,14 +77,13 @@ export class ScrollBar {
 
     this.update()
 
-    const oScrollBar = document.createElement('div')
-    oScrollBar.classList.add(CLASS_NAMES.editorScrollbar, this.type)
+    const oTrack = this.track = createElement('div', { class: 'track' })
+    const oSlider = this.slider = createElement('div', { class: 'slider' })
 
-    const oTrack = this.track = this.#renderTrack()
-    const oSlider = this.slider = this.#renderSlider()
-
-    oScrollBar.appendChild(oTrack)
-    oScrollBar.appendChild(oSlider)
+    const oScrollBar = this.el = createElement('div', {
+      class: [CLASS_NAMES.editorScrollbar, this.type].join(' '),
+      style: `--size: ${this.#ctx.config.scrollbarSize}px;`,
+    }, [oTrack, oSlider])
 
     el.appendChild(oScrollBar)
 
@@ -92,20 +92,6 @@ export class ScrollBar {
     setTimeout(() => {
       oScrollBar.addEventListener('mousedown', this.#handleMouseDown.bind(this))
     })
-  }
-
-  #renderTrack() {
-    const oTrack = document.createElement('div')
-    oTrack.className = 'track'
-
-    return oTrack
-  }
-
-  #renderSlider() {
-    const oSlider = document.createElement('div')
-    oSlider.className = 'slider'
-
-    return oSlider
   }
 
   /**
@@ -124,9 +110,10 @@ export class ScrollBar {
           width,
           height,
         },
+        scrollbarSize,
       },
       interface: {
-        mainViewer,
+        ui: { mainViewer },
       },
     } = this.#ctx
 
@@ -142,9 +129,10 @@ export class ScrollBar {
       this.slider!.style.cssText = `height: ${this.sliderSize}px`
     } else {
       this.#visualLength = width
-      this.#contentLength = contentWidth + 16 + 16 // +16 padding right + 16 scrollbar size
+      this.#contentLength = contentWidth + 16 + scrollbarSize // +16 padding right + 16 scrollbar size
 
       this.slider!.style.cssText = `width: ${this.sliderSize}px`
+      this.el!.style.width = `${this.#visualLength}px`
     }
   }
 
@@ -214,15 +202,23 @@ export class ScrollBar {
     this.scrollBy(this.#contentLength * diff / this.#visualLength)
 
     this.#startDragPosition = position
+
+    this.#ctx.emitter.emit('scrollbar:change', {})
   }
 }
 
-export function createScrollbar(el: HTMLElement, ctx: MarkdanContext): ScrollBarApi {
+export function createScrollbar(ctx: MarkdanContext): EditorScrollBarApi {
   const vertical = new ScrollBar('vertical', ctx)
   const horizontal = new ScrollBar('horizontal', ctx)
 
-  vertical.render(el)
-  horizontal.render(el)
+  const {
+    interface: {
+      ui: { scrollbar },
+    },
+  } = ctx
+
+  vertical.render(scrollbar)
+  horizontal.render(scrollbar)
 
   return {
     vertical,
@@ -241,18 +237,24 @@ export function createScrollbar(el: HTMLElement, ctx: MarkdanContext): ScrollBar
         horizontal.scroll(x)
       }
       if (y !== undefined) {
-        horizontal.scroll(y)
+        vertical.scroll(y)
       }
     },
 
-    scrollBy(x, y = 0) {
-      horizontal.scrollBy(x)
-      horizontal.scrollBy(y)
+    scrollBy(x, y) {
+      if (x !== undefined) {
+        horizontal.scrollBy(x)
+      }
+      if (y !== undefined) {
+        vertical.scrollBy(y)
+      }
+      // horizontal.scrollBy(x)
+      // horizontal.scrollBy(y)
     },
 
     update(ctx?: MarkdanContext) {
       vertical.update(ctx)
       horizontal.update(ctx)
     },
-  } as ScrollBarApi
+  } as EditorScrollBarApi
 }

@@ -2,18 +2,34 @@
  * 构建编辑器界面相关
  */
 
-import type { MarkdanContext } from '@markdan/core'
+import type { EditorSelectionRange, MarkdanContext } from '@markdan/core'
+import { createElement } from '@markdan/helper'
 import { CLASS_NAMES } from './config/dom.config'
 import './style.css'
+import type { EditorCursorApi } from './apiCursor'
 import { createCursorApi } from './apiCursor'
+import type { EditorRenderer } from './apiRenderer'
 import { createRendererApi } from './apiRenderer'
-import { type ScrollBarApi, createScrollbar } from './scrollbar'
-import { type LineNumberAPI, createLineNumber } from './lineNumber'
+import { type EditorScrollBarApi, createScrollbar } from './scrollbar'
+import { type EditorLineNumberAPI, createLineNumber } from './lineNumber'
 
-export interface MarkdanInterface {
+export interface EditorUI {
+  markdan: HTMLElement
+  toolbar: HTMLElement
+  main: HTMLElement
+  cursor: HTMLElement
+  scrollbar: HTMLElement
+  lineNumber: HTMLElement
+  container: HTMLElement
   mainViewer: HTMLElement
-  scrollbar: ScrollBarApi
-  lineNumber: LineNumberAPI
+  footer: HTMLElement
+}
+export interface MarkdanInterface {
+  ui: EditorUI
+  cursor: EditorCursorApi
+  scrollbar: EditorScrollBarApi
+  lineNumber: EditorLineNumberAPI
+  renderer: EditorRenderer
 }
 
 export interface MarkdanInterfaceStyle {
@@ -52,22 +68,6 @@ export function normalizeStyle(style: MarkdanInterfaceStyle, cw: number, ch: num
   }
 }
 
-function createMainViewer(ctx: MarkdanContext) {
-  const oMainViewer = document.createElement('div')
-
-  oMainViewer.classList.add(CLASS_NAMES.editorViewer)
-
-  oMainViewer.style.cssText = `
-  
-  `
-
-  oMainViewer.addEventListener('mousedown', (e: MouseEvent) => {
-    ctx.emitter.emit('editor:mouse:down', e)
-  })
-
-  return oMainViewer
-}
-
 function initObserver(elements: Element[], callback?: (...args: any[]) => any) {
   const observer = new ResizeObserver((_entries) => {
     callback && callback()
@@ -79,82 +79,66 @@ function initObserver(elements: Element[], callback?: (...args: any[]) => any) {
 }
 
 /**
+ * 构建 UI 界面
  * ```markdown
  * markdan
  *  - toolbar
  *  - main
+ *    - [absolute]cursor
+ *    - [absolute]scrollbar
  *    - line-number
  *    - container
- *      - cursor
- *      - scrollbar
+ *      - main-viewer
  *  - footer?
  * ```
  */
-export function createEditorInterfaceApi(el: HTMLElement, ctx: MarkdanContext): MarkdanInterface {
-  const cssText = Object.entries(ctx.config.style).reduce((acc, curr) => {
+function createEditorUI(ctx: MarkdanContext): EditorUI {
+  const lineNumber = createElement('aside', null)
+  const cursor = createElement('div', null)
+  const scrollbar = createElement('div', null)
+
+  const mainViewer = createElement('div', { class: CLASS_NAMES.editorViewer })
+  const container = createElement('div', { class: CLASS_NAMES.editorContainer }, [mainViewer])
+
+  const toolbar = createElement('header', { class: CLASS_NAMES.editorToolbar })
+  const main = createElement(
+    'main',
+    { class: CLASS_NAMES.editorMain },
+    [cursor, scrollbar, lineNumber, container],
+  )
+  const footer = createElement('footer', { class: CLASS_NAMES.editorFooter })
+
+  const markdan = createElement('div', {
+    class: [CLASS_NAMES.editor, ctx.config.theme].join(' '),
+  }, [toolbar, main, footer])
+
+  markdan.style.cssText = Object.entries(ctx.config.style).reduce((acc, curr) => {
     return `${acc}--${curr[0].replace(/[A-Z]/, $1 => `-${$1.toLowerCase()}`)}: ${typeof curr[1] === 'string' ? curr[1] : `${curr[1]}px`};`
   }, '')
-  const oCursor = document.createElement('div')
-  const oScrollBar = document.createElement('div')
 
-  const oContainer = document.createElement('div')
-  oContainer.classList.add(CLASS_NAMES.editorContainer)
+  const ui: EditorUI = ctx.interface.ui = {
+    markdan,
+    toolbar,
+    main,
+    cursor,
+    scrollbar,
+    lineNumber,
+    container,
+    mainViewer,
+    footer,
+  }
 
-  const oToolbar = document.createElement('header')
-  oToolbar.className = CLASS_NAMES.editorToolbar
+  return ui
+}
 
-  const oMain = document.createElement('main')
-  oMain.className = CLASS_NAMES.editorMain
-
-  const oMarkdan = document.createElement('div')
-  oMarkdan.classList.add(CLASS_NAMES.editor, ctx.config.theme)
-  oMarkdan.style.cssText = cssText
-
-  const oFooter = document.createElement('footer')
-  oFooter.className = CLASS_NAMES.editorFooter
-
-  // const _options = Object.assign({}, options)
-
-  const oMainViewer = createMainViewer(ctx)
-  const cursor = createCursorApi(oContainer, oCursor, ctx)
-  const scrollbar = createScrollbar(oScrollBar, ctx)
-  const lineNumber = createLineNumber(ctx)
-
-  oContainer.appendChild(oCursor)
-  oContainer.appendChild(oScrollBar)
-  oContainer.appendChild(oMainViewer)
-
-  lineNumber.mount(oMain)
-  oMain.appendChild(oContainer)
-
-  oToolbar.innerHTML = '<div style="width: 24px; height: 24px;">x</div>'
-  oFooter.innerHTML = '<div>字符数</div>'
-
-  oMarkdan.appendChild(oToolbar)
-  oMarkdan.appendChild(oMain)
-  oMarkdan.appendChild(oFooter)
-
-  el.appendChild(oMarkdan)
+function init(el: HTMLElement, ctx: MarkdanContext) {
   el.style.overflow = 'hidden'
 
-  setTimeout(() => {
-    scrollbar.update(ctx)
-    oMain.addEventListener('wheel', (e) => {
-      ctx.emitter.emit('editor:scroll', e)
-    })
-    document.addEventListener('keydown', (e) => {
-      ctx.emitter.emit('editor:keydown', e)
-    })
-    lineNumber.update()
-  })
-
-  const renderer = createRendererApi(oMainViewer, ctx)
-
   // 更新容器位置尺寸信息
-  ctx.config.containerRect = oContainer.getBoundingClientRect()
+  ctx.config.containerRect = ctx.interface.ui.container.getBoundingClientRect()
   initObserver([document.documentElement, el], () => {
     // 更新容器位置尺寸信息
-    const containerRect = ctx.config.containerRect = oContainer.getBoundingClientRect()
+    const containerRect = ctx.config.containerRect = ctx.interface.ui.container.getBoundingClientRect()
 
     const {
       config: {
@@ -171,22 +155,62 @@ export function createEditorInterfaceApi(el: HTMLElement, ctx: MarkdanContext): 
       height,
     }, containerRect.width, containerRect.height)
 
-    oMarkdan.style.cssText = Object.entries(newStyle).reduce((acc, curr) => {
+    ctx.interface.ui.markdan.style.cssText = Object.entries(newStyle).reduce((acc, curr) => {
       return `${acc}--${curr[0].replace(/[A-Z]/, $1 => `-${$1.toLowerCase()}`)}: ${typeof curr[1] === 'string' ? curr[1] : `${curr[1]}px`};`
     }, '')
   })
-
-  ctx.emitter.on('selection:change', cursor.addCursor)
-  ctx.emitter.on('selection:change', lineNumber.setActive)
+  ctx.emitter.on('selection:change', (ranges: Set<EditorSelectionRange>) => {
+    ctx.interface.cursor.addCursor(ranges)
+    ctx.interface.lineNumber.setActive()
+  })
   ctx.emitter.on('render', (blocks) => {
-    renderer.render(blocks)
-    scrollbar.update(ctx)
-    lineNumber.update()
+    ctx.interface.renderer.render(blocks)
+    ctx.interface.scrollbar.update(ctx)
+    ctx.interface.lineNumber.update()
+  })
+  ctx.emitter.on('scrollbar:change', (options) => {
+    ctx.interface.renderer.onScroll(options)
+    ctx.interface.cursor.onScroll()
   })
 
-  return {
-    mainViewer: oMainViewer,
+  setTimeout(() => {
+    ctx.interface.ui.mainViewer.addEventListener('mousedown', (e: MouseEvent) => {
+      ctx.emitter.emit('editor:mouse:down', e)
+    })
+    ctx.interface.ui.main.addEventListener('wheel', (e) => {
+      ctx.emitter.emit('editor:scroll', e)
+    })
+    document.addEventListener('keydown', (e) => {
+      ctx.emitter.emit('editor:keydown', e)
+    })
+    ctx.interface.scrollbar.update(ctx)
+    ctx.interface.lineNumber.update()
+  })
+}
+
+export function createEditorInterfaceApi(el: HTMLElement, ctx: MarkdanContext): MarkdanInterface {
+  const ui = createEditorUI(ctx)
+
+  const cursor = createCursorApi(ctx)
+  const scrollbar = createScrollbar(ctx)
+  const lineNumber = createLineNumber(ctx)
+
+  const renderer = createRendererApi(ui.mainViewer, ctx)
+
+  // el.appendChild(oMarkdan)
+  el.appendChild(ui.markdan)
+
+  const interfaceApi: MarkdanInterface = {
+    ui,
+    renderer,
+    cursor,
     scrollbar,
     lineNumber,
-  } as MarkdanInterface
+  }
+
+  init(el, ctx)
+
+  ctx.interface = interfaceApi
+
+  return interfaceApi
 }

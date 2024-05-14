@@ -2,7 +2,18 @@ import type { EditorSelectionRange, MarkdanContext, MarkdanSchemaElement } from 
 import type { MarkdanViewBlock } from '@markdan/engine'
 import { parseRenderedElement } from 'packages/engine/src/render'
 
-export function createRendererApi(el: HTMLElement, ctx: MarkdanContext) {
+export interface EditorRenderer {
+  render(_blocks: MarkdanViewBlock[]): void
+  onScroll(options: ScrollEventOptions): void
+}
+
+export interface ScrollEventOptions {
+  x?: number
+  y?: number
+  action?: 'scroll' | 'scrollBy'
+}
+
+export function createRendererApi(el: HTMLElement, ctx: MarkdanContext): EditorRenderer {
   return {
     render(_blocks: MarkdanViewBlock[]) {
       // @todo - 清除 HTML
@@ -28,6 +39,17 @@ export function createRendererApi(el: HTMLElement, ctx: MarkdanContext) {
       document.body.clientWidth // eslint-disable-line no-unused-expressions
 
       parseRenderedElement(viewLineElements, ctx)
+    },
+
+    onScroll({ x, y, action }: ScrollEventOptions) {
+      if (x === undefined && y === undefined) {
+        // 由滚动条内部发起的事件
+      } else {
+        ctx.interface.scrollbar[action === 'scrollBy' ? 'scrollBy' : 'scroll'](x, y)
+      }
+
+      ctx.interface.ui.mainViewer.style.transform = `translate(-${ctx.interface.scrollbar.scrollX}px, -${ctx.interface.scrollbar.scrollY}px)`
+      ctx.interface.ui.lineNumber.style.transform = `translate(0, -${ctx.interface.scrollbar.scrollY}px)`
     },
   }
 }

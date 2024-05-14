@@ -1,7 +1,7 @@
 import type { MarkdanContext } from '@markdan/core'
 import { CLASS_NAMES } from './config/dom.config'
 
-export interface LineNumberAPI {
+export interface EditorLineNumberAPI {
   isMounted: boolean
   lineNumberContainer: HTMLElement
   lineNumberWrapper: HTMLElement
@@ -13,7 +13,7 @@ export interface LineNumberAPI {
   setActive(): void
 }
 
-export function createLineNumber(ctx: MarkdanContext): LineNumberAPI {
+export function createLineNumber(ctx: MarkdanContext): EditorLineNumberAPI {
   const oLineNumberContainer = document.createElement('div')
   oLineNumberContainer.className = CLASS_NAMES.editorLineNumber
 
@@ -75,6 +75,7 @@ export function createLineNumber(ctx: MarkdanContext): LineNumberAPI {
     },
   }
 
+  lineNumberApi.mount(ctx.interface.ui.lineNumber)
   lineNumberApi.render()
 
   return lineNumberApi

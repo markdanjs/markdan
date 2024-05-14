@@ -134,7 +134,7 @@ export class EditorSelectionRange {
       },
       schema: { elements },
       interface: {
-        mainViewer,
+        ui: { mainViewer },
         scrollbar: {
           scrollX,
           scrollY,
@@ -585,7 +585,7 @@ export class EditorSelection {
   }
 
   #getPositionWhenMouseout(e: MouseEvent) {
-    const oMainViewer = this.#ctx.interface.mainViewer
+    const oMainViewer = this.#ctx.interface.ui.mainViewer
     const { anchorBlock } = this.#currentRange!
     const el = this.#ctx.schema.elements.find(i => i.id === anchorBlock)
     if (!el) {

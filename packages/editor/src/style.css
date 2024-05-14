@@ -125,7 +125,6 @@
 :where(.markdan-editor-scrollbar) {
   position: absolute;
   z-index: 11;
-  --size: 16px;
 
   .track {
     position: absolute;
@@ -174,9 +173,8 @@
   }
 
   &.horizontal {
-    left: 0;
+    right: var(--size);
     bottom: 0;
-    width: calc(100% - var(--size));
     height: var(--size);
 
     .slider {
