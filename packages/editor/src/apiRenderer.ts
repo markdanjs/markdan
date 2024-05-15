@@ -1,11 +1,11 @@
 import type { EditorSelectionRange, MarkdanContext, MarkdanSchemaElement } from '@markdan/core'
-import type { MarkdanViewBlock } from '@markdan/engine'
-import { parseRenderedElement } from 'packages/engine/src/render'
+import { type MarkdanViewBlock, parseRenderedElement } from '@markdan/engine'
 import { CLASS_NAMES } from './config/dom.config'
 
 export interface EditorRenderer {
   render(_blocks: MarkdanViewBlock[]): void
   onScroll(options: ScrollEventOptions): void
+  scrollIfCurrentRangeOutOfViewer(): void
 }
 
 export interface ScrollEventOptions {
@@ -52,12 +52,39 @@ export function createRendererApi(el: HTMLElement, ctx: MarkdanContext): EditorR
       ctx.interface.ui.mainViewer.style.transform = `translate(-${ctx.interface.scrollbar.scrollX}px, -${ctx.interface.scrollbar.scrollY}px)`
       ctx.interface.ui.lineNumber.querySelector<HTMLElement>(`.${CLASS_NAMES.editorLineNumber}`)!.style.transform = `translateY(-${ctx.interface.scrollbar.scrollY}px)`
     },
+
+    scrollIfCurrentRangeOutOfViewer() {
+      const {
+        selection: { currentRange },
+        config: {
+          containerRect: { x, y, width, height },
+          style: { lineHeight },
+        },
+      } = ctx
+
+      if (!currentRange?.isCollapsed) return
+
+      const oRange = ctx.interface.ui.cursor.querySelector<HTMLElement>(`[data-anchor-block="${currentRange.anchorBlock}"][data-anchor-offset="${currentRange.anchorOffset}"][data-focus-block="${currentRange.focusBlock}"][data-focus-offset="${currentRange.focusOffset}"]`)
+
+      if (!oRange) return
+
+      const rect = oRange.getBoundingClientRect()
+
+      const left = rect.left - x + 1
+      const top = rect.top - y
+
+      ctx.emitter.emit('scrollbar:change', {
+        x: left > width ? (left - width) : left < 0 ? left : 0,
+        y: top > height - lineHeight ? lineHeight : top < 0 ? top : 0,
+        action: 'scrollBy',
+      })
+    },
   }
 }
 
 export function renderElement(element: MarkdanSchemaElement, _ctx: MarkdanContext) {
   // @todo - 调用插件生成 Dom
-  const oDom = document.createElement(element.groupIds.length ? 'span' : element.content === 'Heading 1' ? 'h1' : 'div')
+  const oDom = document.createElement(element.groupIds.length ? 'span' : 'div')
 
   oDom.setAttribute('data-id', element.id)
 

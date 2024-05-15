@@ -304,6 +304,10 @@ export class EditorSelection {
     return this.#ranges
   }
 
+  get currentRange() {
+    return this.#currentRange
+  }
+
   get focusViewLine() {
     const currentRange = this.#currentRange
     if (!currentRange) {
@@ -386,18 +390,22 @@ export class EditorSelection {
       }
 
       this.addRange(block, offset)
+      this.#ctx.interface.renderer.scrollIfCurrentRangeOutOfViewer()
     } else if (isOnlyShiftKey(e)) {
       if (this.#currentRange) {
         this.setRange(block, offset)
       } else {
         this.addRange(block, offset)
       }
+      this.#ctx.interface.renderer.scrollIfCurrentRangeOutOfViewer()
     } else if (keys.includes('alt') && keys.includes('shift')) {
       // @todo 同时按住 alt & shift 键，生成多选区
       this.addRange(block, offset)
+      this.#ctx.interface.renderer.scrollIfCurrentRangeOutOfViewer()
     } else {
       this.removeAllRanges()
       this.addRange(block, offset)
+      this.#ctx.interface.renderer.scrollIfCurrentRangeOutOfViewer()
     }
   }
 

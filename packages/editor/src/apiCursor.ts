@@ -51,7 +51,7 @@ function handleScroll(ctx: MarkdanContext) {
   })
 }
 
-function addCursor(blockId: string, offset: number, ctx: MarkdanContext) {
+function addCursor(range: EditorSelectionRange, ctx: MarkdanContext) {
   const {
     config: {
       containerRect: {
@@ -73,19 +73,30 @@ function addCursor(blockId: string, offset: number, ctx: MarkdanContext) {
       },
     },
   } = ctx
-  const { left, top } = getRangePosition(blockId, offset, mainViewer)
+  const {
+    anchorBlock,
+    anchorOffset,
+    focusBlock,
+    focusOffset,
+    uid,
+  } = range
+  const { left, top } = getRangePosition(focusBlock, focusOffset, mainViewer)
   const viewLeft = left - x
   const viewTop = top - y
 
-  // console.log({ left, top, x: left - scrollX, y: top - scrollY, viewTop, viewLeft })
-
-  const viewLineId = elements.find(el => el.id === blockId)?.groupIds?.[0] ?? blockId
+  const viewLineId = elements.find(el => el.id === focusBlock)?.groupIds?.[0] ?? focusBlock
   const element = renderedElements.find(e => e.id === viewLineId)!
-  // console.log({ viewTopScrollY: viewTop + scrollY, elY: element.y })
 
   const t = amendTop(viewTop + scrollY, element.y, element.lineHeight, element.height)
 
-  const oCursor = createElement('div', { class: CLASS_NAMES.editorCursor })
+  const oCursor = createElement('div', {
+    'class': CLASS_NAMES.editorCursor,
+    'data-uid': uid,
+    'data-anchor-block': anchorBlock,
+    'data-anchor-offset': `${anchorOffset}`,
+    'data-focus-block': focusBlock,
+    'data-focus-offset': `${focusOffset}`,
+  })
   oCursor.style.cssText = `left: ${viewLeft + lineNumber.getBoundingClientRect().width + scrollX - 1}px;`
     + `top: ${t}px;`
     + `height: ${element.lineHeight}px;`
@@ -126,7 +137,7 @@ export function createCursorApi(ctx: MarkdanContext): EditorCursorApi {
 
       ranges.forEach((range) => {
         range.setRangeRectangle()
-        addCursor(range.focusBlock, range.focusOffset, ctx)
+        addCursor(range, ctx)
         renderRangeRectangles(range, ctx)
       })
     },

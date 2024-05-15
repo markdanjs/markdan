@@ -18,26 +18,21 @@ export function parseRenderedElement(elements: Map<string, HTMLElement>, ctx: Ma
         lineHeight,
       },
     },
+    interface: {
+      scrollbar: {
+        scrollX,
+        scrollY,
+      },
+    },
   } = ctx
 
   const renderElements = [...elements.entries()].map(([id, element]) => {
     const { width, height, left, top } = element.getBoundingClientRect()
-    if (element.textContent === 'Heading 1') {
-      return {
-        id,
-        x: left - x,
-        y: top - y,
-        width,
-        height,
-        lineHeight: 44,
-        element,
-      }
-    }
 
     return {
       id,
-      x: left - x,
-      y: top - y,
+      x: left - x + scrollX,
+      y: top - y + scrollY,
       width,
       height,
       lineHeight,

@@ -168,4 +168,6 @@ export function breakLineCommand(ctx: MarkdanContext) {
 
   ctx.emitter.emit('schema:change', ctx.schema)
   ctx.emitter.emit('selection:change', ctx.selection.ranges)
+
+  ctx.interface.renderer.scrollIfCurrentRangeOutOfViewer()
 }

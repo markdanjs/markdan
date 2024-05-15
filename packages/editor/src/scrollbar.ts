@@ -130,12 +130,12 @@ export class ScrollBar {
         ? height
         : contentHeight
 
-      this.slider!.style.cssText = `height: ${this.sliderSize}px`
+      this.slider!.style.height = `${this.sliderSize}px`
     } else {
       this.#visualLength = width
       this.#contentLength = contentWidth + scrollbarSize
 
-      this.slider!.style.cssText = `width: ${this.sliderSize}px`
+      this.slider!.style.width = `${this.sliderSize}px`
       this.el!.style.width = `${this.#visualLength}px`
     }
   }
