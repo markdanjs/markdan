@@ -1,4 +1,7 @@
 export { createEngineApi as initEngine } from './apiEngine'
 
 export { MarkdanViewBlock } from './view'
-export { MarkdanRenderedElement } from './render'
+export {
+  type MarkdanRenderedElement,
+  parseRenderedElement,
+} from './render'
