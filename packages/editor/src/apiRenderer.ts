@@ -1,6 +1,7 @@
 import type { EditorSelectionRange, MarkdanContext, MarkdanSchemaElement } from '@markdan/core'
 import type { MarkdanViewBlock } from '@markdan/engine'
 import { parseRenderedElement } from 'packages/engine/src/render'
+import { CLASS_NAMES } from './config/dom.config'
 
 export interface EditorRenderer {
   render(_blocks: MarkdanViewBlock[]): void
@@ -49,7 +50,7 @@ export function createRendererApi(el: HTMLElement, ctx: MarkdanContext): EditorR
       }
 
       ctx.interface.ui.mainViewer.style.transform = `translate(-${ctx.interface.scrollbar.scrollX}px, -${ctx.interface.scrollbar.scrollY}px)`
-      ctx.interface.ui.lineNumber.style.transform = `translate(0, -${ctx.interface.scrollbar.scrollY}px)`
+      ctx.interface.ui.lineNumber.querySelector<HTMLElement>(`.${CLASS_NAMES.editorLineNumber}`)!.style.transform = `translateY(-${ctx.interface.scrollbar.scrollY}px)`
     },
   }
 }

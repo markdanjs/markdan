@@ -51,9 +51,6 @@ export class ScrollBar {
   /** 滑块位置 */
   get sliderPosition() {
     return Math.max(0, Math.min(
-      // this.type === 'vertical'
-      //   ? this.#visualLength - this.sliderSize
-      //   : this.#visualLength - this.sliderSize - 16,
       this.#visualLength - this.sliderSize,
       this.currentPosition * this.#visualLength / this.#contentLength),
     )
@@ -86,6 +83,14 @@ export class ScrollBar {
     }, [oTrack, oSlider])
 
     el.appendChild(oScrollBar)
+
+    const observer = new ResizeObserver(() => {
+      setTimeout(() => {
+        this.update()
+      })
+    })
+
+    observer.observe(this.#ctx.interface.ui.mainViewer)
 
     this.isRendered = true
 
@@ -123,13 +128,12 @@ export class ScrollBar {
       this.#visualLength = height
       this.#contentLength = contentHeight <= height
         ? height
-        // 内容高度 + (可视高度 - lineHeight)
-        : contentHeight + height - this.#ctx.config.style.lineHeight
+        : contentHeight
 
       this.slider!.style.cssText = `height: ${this.sliderSize}px`
     } else {
       this.#visualLength = width
-      this.#contentLength = contentWidth + 16 + scrollbarSize // +16 padding right + 16 scrollbar size
+      this.#contentLength = contentWidth + scrollbarSize
 
       this.slider!.style.cssText = `width: ${this.sliderSize}px`
       this.el!.style.width = `${this.#visualLength}px`
@@ -248,8 +252,6 @@ export function createScrollbar(ctx: MarkdanContext): EditorScrollBarApi {
       if (y !== undefined) {
         vertical.scrollBy(y)
       }
-      // horizontal.scrollBy(x)
-      // horizontal.scrollBy(y)
     },
 
     update(ctx?: MarkdanContext) {

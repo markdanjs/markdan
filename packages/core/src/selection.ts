@@ -170,28 +170,13 @@ export class EditorSelectionRange {
     const originalRange = new Range()
 
     setOriginalRange(originalRange, anchorDom, anchorOffset)
-    // if ((anchorDom.firstChild?.textContent?.length ?? 0) === 0) {
-    //   originalRange.setStart(anchorDom, 0)
-    //   originalRange.setEnd(anchorDom, 0)
-    // } else {
-    //   originalRange.setStart(anchorDom.firstChild!, anchorOffset)
-    //   originalRange.setEnd(anchorDom.firstChild!, anchorOffset)
-    // }
 
     let { left: startLeft, top: startTop } = (anchorDom.firstChild?.textContent?.length ?? 0) === 0
       ? anchorDom.getBoundingClientRect()
       : originalRange.getBoundingClientRect()
 
     setOriginalRange(originalRange, focusDom, focusOffset)
-    // if ((focusDom.firstChild?.textContent?.length ?? 0) === 0) {
-    //   originalRange.setStart(focusDom, 0)
-    //   originalRange.setEnd(focusDom, 0)
-    // } else {
-    //   originalRange.setStart(focusDom.firstChild!, focusOffset)
-    //   originalRange.setEnd(focusDom.firstChild!, focusOffset)
-    // }
-    // originalRange.setStart(focusDom.firstChild!, focusOffset)
-    // originalRange.setEnd(focusDom.firstChild!, focusOffset)
+
     let { left: endLeft, top: endTop } = (focusDom.firstChild?.textContent?.length ?? 0) === 0
       ? focusDom.getBoundingClientRect()
       : originalRange.getBoundingClientRect()
@@ -220,8 +205,8 @@ export class EditorSelectionRange {
 
       if (startTop > endTop) {
         setOriginalRange(originalRange, focusDom, focusOffset, 'Start')
-        // originalRange.setStart(focusDom.firstChild!, focusOffset)
         originalRange.setEnd(endViewLine, endViewLine.childNodes.length)
+
         const startRect = (focusDom.firstChild?.textContent?.length ?? 0) === 0
           ? focusDom.getBoundingClientRect()
           : originalRange.getBoundingClientRect()
@@ -234,8 +219,8 @@ export class EditorSelectionRange {
         }
 
         setOriginalRange(originalRange, anchorDom, anchorOffset, 'End')
-        // originalRange.setEnd(anchorDom.firstChild!, anchorOffset)
         originalRange.setStart(startViewLine, 0)
+
         const endRect = (anchorDom.firstChild?.textContent?.length ?? 0) === 0
           ? anchorDom.getBoundingClientRect()
           : originalRange.getBoundingClientRect()
@@ -248,8 +233,8 @@ export class EditorSelectionRange {
         }
       } else {
         setOriginalRange(originalRange, anchorDom, anchorOffset, 'Start')
-        // originalRange.setStart(anchorDom.firstChild!, anchorOffset)
         originalRange.setEnd(startViewLine, startViewLine.childNodes.length)
+
         const startRect = (anchorDom.firstChild?.textContent?.length ?? 0) === 0
           ? anchorDom.getBoundingClientRect()
           : originalRange.getBoundingClientRect()
@@ -262,8 +247,8 @@ export class EditorSelectionRange {
         }
 
         setOriginalRange(originalRange, focusDom, focusOffset, 'End')
-        // originalRange.setEnd(focusDom.firstChild!, focusOffset)
         originalRange.setStart(endViewLine, 0)
+
         const endRect = (focusDom.firstChild?.textContent?.length ?? 0) === 0
           ? focusDom.getBoundingClientRect()
           : originalRange.getBoundingClientRect()
@@ -445,24 +430,7 @@ export class EditorSelection {
         height: height - scrollbarSize,
       })
     ) {
-      if (e.clientX > x + width - scrollbarSize) {
-        this.#ctx.interface.scrollbar.scroll(Infinity)
-      } else if (e.clientX < x) {
-        this.#ctx.interface.scrollbar.scroll(0)
-      }
-
-      if (e.clientY > y + height - scrollbarSize) {
-        this.#ctx.interface.scrollbar.vertical.scrollBy(scrollbarSize)
-      } else if (e.clientY < y) {
-        this.#ctx.interface.scrollbar.vertical.scrollBy(-scrollbarSize)
-      }
-
-      const { block, offset } = this.#getPositionWhenMouseout(e)
-
-      this.setRange(
-        block,
-        offset,
-      )
+      this.#handleOutOfViewport(e)
     } else {
       const { node, offset } = getBlockPositionByClick({
         x: e.clientX,
@@ -522,24 +490,7 @@ export class EditorSelection {
         height: height - scrollbarSize,
       })
     ) {
-      if (e.clientX > x + width - scrollbarSize) {
-        this.#ctx.interface.scrollbar.scroll(Infinity)
-      } else if (e.clientX < x) {
-        this.#ctx.interface.scrollbar.scroll(0)
-      }
-
-      if (e.clientY > y + height - scrollbarSize) {
-        this.#ctx.interface.scrollbar.vertical.scrollBy(scrollbarSize)
-      } else if (e.clientY < y) {
-        this.#ctx.interface.scrollbar.vertical.scrollBy(-scrollbarSize)
-      }
-
-      const { block, offset } = this.#getPositionWhenMouseout(e)
-
-      this.setRange(
-        block,
-        offset,
-      )
+      this.#handleOutOfViewport(e)
       return
     }
 
@@ -551,6 +502,33 @@ export class EditorSelection {
     const block = getBlockIdByNode(node)
 
     this.setRange(block, offset)
+  }
+
+  #handleOutOfViewport(e: MouseEvent) {
+    const {
+      config: {
+        scrollbarSize,
+        containerRect: {
+          x,
+          y,
+          width,
+          height,
+        },
+      },
+      emitter,
+    } = this.#ctx
+    emitter.emit('scrollbar:change', {
+      x: scrollbarSize * (e.clientX > x + width - scrollbarSize ? 1 : e.clientX < x ? -1 : 0),
+      y: scrollbarSize * (e.clientY > y + height - scrollbarSize ? 1 : e.clientY < y ? -1 : 0),
+      action: 'scrollBy',
+    })
+
+    const { block, offset } = this.#getPositionWhenMouseout(e)
+
+    this.setRange(
+      block,
+      offset,
+    )
   }
 
   /**
