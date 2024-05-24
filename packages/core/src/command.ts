@@ -53,15 +53,12 @@ export function createCommandApi(ctx: MarkdanContext): MarkdanCommand {
  * 删除选区内容
  */
 export function deleteContentCommand(ctx: MarkdanContext) {
+  const { schema } = ctx
+  const { elements } = schema
   ctx.selection.ranges.forEach((range) => {
     if (!range.isCollapsed) {
       range.collapse()
     } else {
-      // 删除前面一个字符
-      const {
-        schema: { elements },
-      } = ctx
-
       const { anchorBlock, anchorOffset } = range
       const idx = elements.findIndex(el => el.id === anchorBlock)
       if (idx === -1) {
@@ -70,7 +67,11 @@ export function deleteContentCommand(ctx: MarkdanContext) {
       const element = elements[idx]
 
       if (anchorOffset !== 0) {
-        element.content = `${element.content.slice(0, anchorOffset - 1)}${element.content.slice(anchorOffset)}`
+        schema.splice(idx, 1, {
+          ...elements[idx],
+          content: `${element.content.slice(0, anchorOffset - 1)}${element.content.slice(anchorOffset)}`,
+        })
+
         range.setRange(anchorBlock, anchorOffset - 1, anchorBlock, anchorOffset - 1)
       } else {
         if (idx === 0) return
@@ -83,14 +84,20 @@ export function deleteContentCommand(ctx: MarkdanContext) {
         }
 
         const prevElementContentLength = prevElement.content.length
-        prevElement.content = `${prevElement.content.slice(0, -1)}${element.content.slice(anchorOffset)}`
+
+        schema.splice(prevElementIdx, 1, {
+          ...prevElement,
+          content: `${prevElement.content.slice(0, -1)}${element.content.slice(anchorOffset)}`,
+        })
+
         range.setRange(prevElement.id, prevElementContentLength - 1, prevElement.id, prevElementContentLength - 1)
 
-        elements.splice(prevElementIdx + 1, idx - (prevElementIdx + 1) + 1)
+        schema.splice(prevElementIdx + 1, idx - (prevElementIdx + 1) + 1)
       }
     }
   })
-  ctx.emitter.emit('schema:change', ctx.schema)
+
+  ctx.emitter.emit('schema:change')
   ctx.emitter.emit('selection:change', ctx.selection.ranges)
 }
 
@@ -106,7 +113,9 @@ export function breakLineCommand(ctx: MarkdanContext) {
   })
 
   // 拆分成两行
-  const { elements } = ctx.schema
+  const { schema } = ctx
+  const { elements } = schema
+
   ctx.selection.ranges.forEach((range) => {
     // 新起行继承原行的所有父级信息
     const idx = elements.findIndex(el => el.id === range.anchorBlock)
@@ -124,14 +133,19 @@ export function breakLineCommand(ctx: MarkdanContext) {
 
     if (content.slice(range.focusOffset) === '' && tailElements.length === 0) {
       // 后面内容为空，直接起一个新行
-      elements[idx].content = content.slice(0, range.anchorOffset)
+      schema.splice(idx, 1, {
+        ...elements[idx],
+        content: content.slice(0, range.anchorOffset),
+      })
+
       const newLine = ctx.schema.createElement('paragraph', [], '')
-      elements.splice(idx + 1, Math.max(0, tailElements.length - 1), newLine)
+
+      schema.splice(idx + 1, Math.max(0, tailElements.length - 1), newLine)
       range.setRange(newLine.id, 0, newLine.id, 0)
     } else {
       const map = new Map<string, string>([[id, createRandomId()]])
 
-      const newElements = groupIds.reduce((prev, groupId) => {
+      const additionalElements = groupIds.reduce((prev, groupId) => {
         const el = elements.find(e => e.id === groupId)
         if (!el) {
           throw new Error('获取选区位置父级元素失败')
@@ -146,7 +160,7 @@ export function breakLineCommand(ctx: MarkdanContext) {
       }, [] as MarkdanSchemaElement[])
 
       const newLines = [
-        ...newElements,
+        ...additionalElements,
         // 折断的元素
         {
           ...elements[idx],
@@ -160,13 +174,17 @@ export function breakLineCommand(ctx: MarkdanContext) {
         }),
       ]
 
-      elements[idx].content = content.slice(0, range.anchorOffset)
-      elements.splice(idx + 1, Math.max(0, tailElements.length - 1), ...newLines)
+      schema.splice(idx, 1, {
+        ...elements[idx],
+        content: content.slice(0, range.anchorOffset),
+      })
+
+      schema.splice(idx + 1, Math.max(0, tailElements.length - 1), ...newLines)
       range.setRange(map.get(id)!, 0, map.get(id)!, 0)
     }
   })
 
-  ctx.emitter.emit('schema:change', ctx.schema)
+  ctx.emitter.emit('schema:change')
   ctx.emitter.emit('selection:change', ctx.selection.ranges)
 
   ctx.interface.renderer.scrollIfCurrentRangeOutOfViewer()

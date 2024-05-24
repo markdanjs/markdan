@@ -11,6 +11,8 @@ export interface EditorScrollBarApi {
   horizontal: ScrollBar
   readonly scrollX: number
   readonly scrollY: number
+  readonly prevScrollX: number
+  readonly prevScrollY: number
   scroll(x?: number, y?: number): void
   scrollBy(x?: number, y?: number): void
   update(ctx?: MarkdanContext): void
@@ -29,6 +31,8 @@ export class ScrollBar {
   #contentLength = 0
   /** 当前位置 */
   #currentPosition = 0
+  /** 上一个位置 */
+  #prevPosition = 0
 
   track: HTMLElement | null = null
   slider: HTMLElement | null = null
@@ -56,12 +60,17 @@ export class ScrollBar {
     )
   }
 
+  get prevPosition() {
+    return this.#prevPosition
+  }
+
   /** 视图滚动位置 */
   get currentPosition() {
     return this.#currentPosition
   }
 
   set currentPosition(position: number) {
+    this.#prevPosition = this.#currentPosition
     this.#currentPosition = Math.max(0, Math.min(position, this.#contentLength - this.#visualLength))
 
     if (this.slider) {
@@ -115,25 +124,24 @@ export class ScrollBar {
           width,
           height,
         },
+        style: { lineHeight },
         scrollbarSize,
-      },
-      interface: {
-        ui: { mainViewer },
+        paddingRight,
+        lastTop,
+        maxWidth,
       },
     } = this.#ctx
 
-    const { width: contentWidth = 0, height: contentHeight = 0 } = mainViewer?.getBoundingClientRect() ?? {}
-
     if (this.type === 'vertical') {
       this.#visualLength = height
-      this.#contentLength = contentHeight <= height
+      this.#contentLength = lastTop <= height
         ? height
-        : contentHeight
+        : lastTop + height - lineHeight
 
       this.slider!.style.height = `${this.sliderSize}px`
     } else {
       this.#visualLength = width
-      this.#contentLength = contentWidth + scrollbarSize
+      this.#contentLength = maxWidth + paddingRight + scrollbarSize
 
       this.slider!.style.width = `${this.sliderSize}px`
       this.el!.style.width = `${this.#visualLength}px`
@@ -234,6 +242,14 @@ export function createScrollbar(ctx: MarkdanContext): EditorScrollBarApi {
 
     get scrollY() {
       return vertical.currentPosition
+    },
+
+    get prevScrollX() {
+      return horizontal.prevPosition
+    },
+
+    get prevScrollY() {
+      return vertical.prevPosition
     },
 
     scroll(x, y) {

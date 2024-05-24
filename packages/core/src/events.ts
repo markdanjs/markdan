@@ -49,13 +49,11 @@ export function registerEventHandler(ctx: MarkdanContext) {
       const diffY = Math.abs(clientY - wheelStartPoint.y)
 
       if (diffY > diffX) {
-        // ctx.interface.scrollbar.horizontal.scrollBy(deltaX)
         ctx.emitter.emit('scrollbar:change', {
           x: deltaX,
           action: 'scrollBy',
         })
       } else {
-        // ctx.interface.scrollbar.vertical.scrollBy(deltaY)
         ctx.emitter.emit('scrollbar:change', {
           y: deltaY,
           action: 'scrollBy',
@@ -64,31 +62,17 @@ export function registerEventHandler(ctx: MarkdanContext) {
 
       wheelStartPoint = { x: clientX, y: clientY }
     } else if (deltaX !== 0) {
-      // ctx.interface.scrollbar.horizontal.scrollBy(deltaX)
       ctx.emitter.emit('scrollbar:change', {
         x: deltaX,
         action: 'scrollBy',
       })
     } else if (deltaY !== 0) {
-      // ctx.interface.scrollbar.vertical.scrollBy(deltaY)
       ctx.emitter.emit('scrollbar:change', {
         y: deltaY,
         action: 'scrollBy',
       })
     }
   }
-
-  // function handleScrollBarChange(_position: number, type: ScrollBarType) {
-  //   ctx.interface.mainViewer.style.transform = `translate(-${ctx.interface.scrollbar.scrollX}px, -${ctx.interface.scrollbar.scrollY}px)`
-  //   ctx.interface.lineNumber.lineNumberWrapper.style.transform = `translate(0, -${ctx.interface.scrollbar.scrollY}px)`
-
-  //   if (type === 'vertical') {
-  //     // @todo - 更新DOM渲染内容
-  //   }
-
-  //   // 更新选区位置
-  //   ctx.emitter.emit('selection:change', ctx.selection.ranges)
-  // }
 
   ctx.emitter.on('blocks:change', (viewBlocks: MarkdanViewBlock[]) => {
     ctx.viewBlocks = viewBlocks
@@ -99,5 +83,4 @@ export function registerEventHandler(ctx: MarkdanContext) {
   ctx.emitter.on('editor:keydown', handleKeydown)
 
   ctx.emitter.on('editor:scroll', handleEditorScroll)
-  // ctx.emitter.on('scrollbar:change', handleScrollBarChange)
 }

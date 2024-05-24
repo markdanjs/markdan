@@ -80,9 +80,10 @@ function addCursor(range: EditorSelectionRange, ctx: MarkdanContext) {
     focusOffset,
     uid,
   } = range
-  const { left, top } = getRangePosition(focusBlock, focusOffset, mainViewer)
-  const viewLeft = left - x
-  const viewTop = top - y
+  const rect = getRangePosition(focusBlock, focusOffset, mainViewer)
+  if (!rect) return
+  const viewLeft = rect.left - x
+  const viewTop = rect.top - y
 
   const viewLineId = elements.find(el => el.id === focusBlock)?.groupIds?.[0] ?? focusBlock
   const element = renderedElements.find(e => e.id === viewLineId)!
