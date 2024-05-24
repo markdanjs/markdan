@@ -152,9 +152,16 @@ export class EditorSelectionRange {
 
     let aIdx = elements.findIndex(item => item.id === anchorBlock)
     let fIdx = elements.findIndex(item => item.id === focusBlock)
-    if (aIdx > fIdx) {
+    if (aIdx > fIdx || (aIdx === fIdx && anchorOffset > focusOffset)) {
       // 交换
-      [anchorBlock, anchorOffset, focusBlock, focusOffset, aIdx, fIdx] = [focusBlock, focusOffset, anchorBlock, anchorOffset, fIdx, aIdx]
+      [
+        anchorBlock,
+        anchorOffset,
+        focusBlock,
+        focusOffset,
+        aIdx,
+        fIdx,
+      ] = [focusBlock, focusOffset, anchorBlock, anchorOffset, fIdx, aIdx]
     }
 
     const rectangles: Rectangle[] = []
