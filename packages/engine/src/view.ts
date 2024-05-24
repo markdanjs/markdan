@@ -1,65 +1,92 @@
-import type { MarkdanSchemaElement } from '@markdan/core'
+import type { MarkdanContext, MarkdanSchemaElement } from '@markdan/core'
 
 export interface MarkdanViewBlock extends MarkdanSchemaElement {
   children?: MarkdanViewBlock[]
 }
 
-export function parseSchema(elements: MarkdanSchemaElement[]) {
-  return elementsToBlocks(elements)
-}
+/**
+ * - 受影响行的 id
+ * - 行为
+ * - 前一行的 id
+ */
+export type AffectedViewLine = [
+  string,
+  'change' | 'add' | 'delete',
+  string?,
+]
 
-function elementsToBlocks(elements: MarkdanSchemaElement[], id = ''): MarkdanViewBlock[] {
-  let element = id ? elements.find(b => b.id === id) : elements[0]
+export function parseSchema(ctx: MarkdanContext) {
+  const affectedViewLines = new Set<AffectedViewLine>() // 受到影响的渲染行
 
-  if (!element) {
-    throw new Error('Cannot parse elements.')
-  }
+  const {
+    schema: { elements, affectedElements },
+    viewBlocks,
+  } = ctx
 
-  // 找到最顶层的 element
-  if (!id) {
-    while (element.groupIds?.length > 0) {
-      const parentId = element.groupIds[0] as string
-      element = elements.find(b => b.id === parentId)
+  // 通过一份新的 elements + 一个受影响的 elements 集合
+  // 再结合旧的 view blocks
+  // 生成新的 view blocks
+  // 同时生成一份受影响的 viewLines 集合
+  affectedElements.forEach(([id, behavior, previewIndexOrGroupIds]) => {
+    if (behavior === 'delete') {
+      const groupIds = previewIndexOrGroupIds as string[]
+      const parent = getViewBlock(groupIds, viewBlocks)
+      parent.splice(parent.findIndex(el => el.id === id), 1)
+      if (!groupIds[0]) {
+        affectedViewLines.add([id, 'delete'])
+      } else {
+        affectedViewLines.add([groupIds[0], 'change'])
+      }
+    } else {
+      const idx = elements.findIndex(item => item.id === id)
+      if (idx === -1) return
+      const element = elements[idx]
 
-      if (!element) {
-        throw new Error(`找不到 id 为 "${parentId}" 的 Element`)
+      // 找到受影响元素在 viewBlocks 中的父级元素
+      // 需要注意这是一个 children 的引用，操作时需要采用对原数组产生影响的方法 splice / push 等
+      const parent = getViewBlock(element.groupIds, viewBlocks)
+      if (previewIndexOrGroupIds === -1) {
+        parent.push({ ...element })
+      } else {
+        // 在 parent 中寻找前一个 element
+        const previewViewBlockIndex = parent.findIndex(item => item.id === elements[previewIndexOrGroupIds as number]?.id)
+
+        if (previewViewBlockIndex === -1) {
+          // 找不到前一个元素，说明他前一个元素不在当前的块中
+          parent.push({ ...element })
+        } else {
+          // 找到则在其后面插入
+          parent.splice(previewViewBlockIndex + 1, 0, { ...element })
+        }
+      }
+      if (!element.groupIds[0]) {
+        // 新增时需要知道一个位置
+        const anchorViewLineId = elements[idx - 1]?.groupIds?.[0] ?? elements[idx - 1]?.id
+        affectedViewLines.add([element.id, 'add', anchorViewLineId])
+      } else {
+        affectedViewLines.add([element.groupIds[0], 'change'])
       }
     }
-  }
+  })
 
-  // 找到顶层 block 下面所有的元素
-  const toBeResolvedElements = elements.filter(b => b.id === element.id || b.groupIds?.includes(element.id))
-  const restElements = elements.filter(b => b.id !== element.id && !b.groupIds?.includes(element.id))
+  affectedElements.clear()
 
-  const blocks = convertToNestedStructure(structuredClone(toBeResolvedElements))
-
-  if (restElements.length > 0) {
-    return blocks.concat(elementsToBlocks(restElements))
-  }
-
-  return blocks
+  return affectedViewLines
 }
 
-function convertToNestedStructure(elements: MarkdanViewBlock[]): MarkdanViewBlock[] {
-  const map: Record<MarkdanViewBlock['id'], MarkdanViewBlock> = {}
-  const result: MarkdanViewBlock[] = []
+function getViewBlock(groupIds: string[], viewBlocks: MarkdanViewBlock[]) {
+  const len = groupIds.length
+  if (!len) return viewBlocks
 
-  // Create a map of ids to their respective objects
-  elements.forEach((item) => {
-    map[item.id] = item
-    item.children = []
-  })
+  let parent = viewBlocks
+  let idx = 0
+  let item: MarkdanViewBlock
 
-  // Populate children array of each object based on groupIds
-  elements.forEach((item) => {
-    const parentId = item.groupIds[item.groupIds.length - 1]
-    const parent = map[parentId]
-    if (parent) {
-      parent.children!.push(item)
-    } else {
-      result.push(item) // If a parent is not found, add the item to result
-    }
-  })
+  while (idx < len) {
+    item = parent.find(item => item.id === groupIds[idx])!
+    parent = item.children ?? (item.children = [])
+    idx++
+  }
 
-  return result
+  return parent
 }

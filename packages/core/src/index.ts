@@ -4,9 +4,8 @@ export {
   createApp,
 } from './apiCreateApp'
 
-export {
-  type EditorSelectionRange,
-} from './selection'
+export * from './selection'
+export * from './range'
 
 export {
   type MarkdanSchemaElement,

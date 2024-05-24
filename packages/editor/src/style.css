@@ -87,6 +87,7 @@
   cursor: text;
 
   .view-line {
+    position: absolute;
     width: max-content;
 
     &:empty::after,

@@ -158,7 +158,6 @@ function init(el: HTMLElement, ctx: MarkdanContext) {
     ctx.interface.ui.markdan.style.cssText = Object.entries(newStyle).reduce((acc, curr) => {
       return `${acc}--${curr[0].replace(/[A-Z]/, $1 => `-${$1.toLowerCase()}`)}: ${typeof curr[1] === 'string' ? curr[1] : `${curr[1]}px`};`
     }, '')
-    ctx.interface.ui.mainViewer.style.paddingBottom = `${containerRect.height - ctx.config.style.lineHeight}px`
   })
   ctx.emitter.on('selection:change', (ranges: Set<EditorSelectionRange>) => {
     ctx.interface.cursor.addCursor(ranges)
@@ -174,7 +173,7 @@ function init(el: HTMLElement, ctx: MarkdanContext) {
   })
 
   setTimeout(() => {
-    ctx.interface.ui.mainViewer.addEventListener('mousedown', (e: MouseEvent) => {
+    ctx.interface.ui.container.addEventListener('mousedown', (e: MouseEvent) => {
       ctx.emitter.emit('editor:mouse:down', e)
     })
     ctx.interface.ui.main.addEventListener('wheel', (e) => {

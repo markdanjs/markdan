@@ -1,9 +1,11 @@
 import type { EditorSelectionRange, MarkdanContext, MarkdanSchemaElement } from '@markdan/core'
-import { type MarkdanViewBlock, parseRenderedElement } from '@markdan/engine'
+import type { AffectedViewLine, MarkdanViewBlock } from '@markdan/engine'
+import { patchRenderedElements } from '@markdan/engine'
 import { CLASS_NAMES } from './config/dom.config'
 
 export interface EditorRenderer {
-  render(_blocks: MarkdanViewBlock[]): void
+  render(affectedViewLines: Set<AffectedViewLine>): void
+  virtualScrollRender(): void
   onScroll(options: ScrollEventOptions): void
   scrollIfCurrentRangeOutOfViewer(): void
 }
@@ -14,32 +16,99 @@ export interface ScrollEventOptions {
   action?: 'scroll' | 'scrollBy'
 }
 
+function getIndexes(elements: Array<{ y: number } & Record<any, any>>, min: number, max: number) {
+  let minIndex = -1
+  let maxIndex = -1
+
+  elements.some(({ y }, index) => {
+    if (minIndex === -1 && y >= min) {
+      minIndex = index
+
+      return false
+    }
+    if (y <= max && y > maxIndex) {
+      maxIndex = index
+      return false
+    }
+    return true
+  })
+
+  return [minIndex, maxIndex]
+}
+
 export function createRendererApi(el: HTMLElement, ctx: MarkdanContext): EditorRenderer {
   return {
-    render(_blocks: MarkdanViewBlock[]) {
-      // @todo - 清除 HTML
-      el.innerHTML = ''
-      const domMapper = new Map([['root', el]])
-      const viewLineElements = new Map<string, HTMLElement>()
-      ctx.schema.elements.map((element) => {
-        const oDom = renderElement(element, ctx)
-        if (!element.groupIds.length) {
-          oDom.className = 'view-line'
-          domMapper.get('root')?.appendChild(oDom)
+    render(affectedViewLines: Set<AffectedViewLine>) {
+      const {
+        renderedElements,
+        interface: {
+          ui: { mainViewer },
+        },
+        viewBlocks,
+      } = ctx
+      const viewLineElements = new Set<[HTMLElement | null, ...AffectedViewLine]>()
 
-          viewLineElements.set(element.id, oDom)
-        } else {
-          domMapper.get(element.groupIds.at(-1)!)?.appendChild(oDom)
+      affectedViewLines.forEach(([viewLineId, behavior, previewId]) => {
+        if (behavior === 'delete') {
+          viewLineElements.add([null, viewLineId, behavior, previewId])
+          return
         }
 
-        domMapper.set(element.id, oDom)
+        const el = renderedElements.find(el => el.id === viewLineId)
+        if (el) {
+          el.element.remove()
+          // @todo - diff
+        }
+        const viewBlock = viewBlocks.find(el => el.id === viewLineId)
+        if (!viewBlock) {
+          throw new Error('view blocks 结构错误')
+        }
 
-        return false
+        const oContainer = renderElement(viewBlock, ctx)
+        oContainer.className = 'view-line'
+        mainViewer.appendChild(oContainer)
+        if (viewBlock.children?.length) {
+          renderChildren(viewBlock.children, oContainer, ctx)
+        }
+        viewLineElements.add([oContainer, viewBlock.id, behavior, previewId])
       })
 
       document.body.clientWidth // eslint-disable-line no-unused-expressions
+      patchRenderedElements(viewLineElements, ctx)
+      this.virtualScrollRender()
+    },
 
-      parseRenderedElement(viewLineElements, ctx)
+    virtualScrollRender() {
+      const {
+        config: {
+          containerRect: {
+            height,
+          },
+        },
+        interface: {
+          scrollbar: { scrollY },
+        },
+        renderedElements,
+      } = ctx
+
+      const bufferSize = 2
+
+      let [minIndex, maxIndex] = getIndexes(renderedElements, scrollY, scrollY + height)
+      minIndex = Math.max(0, minIndex - bufferSize)
+      maxIndex = Math.min(renderedElements.length, maxIndex + bufferSize)
+
+      const elements = renderedElements.slice(minIndex, maxIndex)
+      el.innerHTML = ''
+      el.style.paddingTop = `${elements[0]?.y ?? 0}px`
+
+      elements.map((element) => {
+        el.appendChild(element.element)
+        element.element.style.top = `${element.y}px`
+        // 设置容器最大的宽度
+        ctx.config.maxWidth = Math.max(ctx.config.maxWidth, element.width)
+
+        return false
+      })
     },
 
     onScroll({ x, y, action }: ScrollEventOptions) {
@@ -49,8 +118,22 @@ export function createRendererApi(el: HTMLElement, ctx: MarkdanContext): EditorR
         ctx.interface.scrollbar[action === 'scrollBy' ? 'scrollBy' : 'scroll'](x, y)
       }
 
-      ctx.interface.ui.mainViewer.style.transform = `translate(-${ctx.interface.scrollbar.scrollX}px, -${ctx.interface.scrollbar.scrollY}px)`
-      ctx.interface.ui.lineNumber.querySelector<HTMLElement>(`.${CLASS_NAMES.editorLineNumber}`)!.style.transform = `translateY(-${ctx.interface.scrollbar.scrollY}px)`
+      const {
+        interface: {
+          scrollbar: {
+            scrollX,
+            scrollY,
+            prevScrollY,
+          },
+        },
+      } = ctx
+
+      if (prevScrollY !== scrollY) {
+        this.virtualScrollRender()
+      }
+
+      ctx.interface.ui.mainViewer.style.transform = `translate(-${scrollX}px, -${scrollY}px)`
+      ctx.interface.ui.lineNumber.querySelector<HTMLElement>(`.${CLASS_NAMES.editorLineNumber}`)!.style.transform = `translateY(-${scrollY}px)`
     },
 
     scrollIfCurrentRangeOutOfViewer() {
@@ -79,6 +162,17 @@ export function createRendererApi(el: HTMLElement, ctx: MarkdanContext): EditorR
         action: 'scrollBy',
       })
     },
+  }
+}
+
+function renderChildren(viewBlocks: MarkdanViewBlock[], container: HTMLElement, ctx: MarkdanContext) {
+  for (let i = 0; i < viewBlocks.length; i++) {
+    const el = renderElement(viewBlocks[i], ctx)
+    container.appendChild(el)
+
+    if (viewBlocks[i].children) {
+      renderChildren(viewBlocks[i].children!, el, ctx)
+    }
   }
 }
 
@@ -155,6 +249,4 @@ function getValueByViewLine(ctx: MarkdanContext, startViewLineId: string, endVie
   }
 
   return `${startValue}${middleValue}${endValue}`
-
-  // const startIdx = elements.findIndex(el => el.id === startViewLineId)
 }

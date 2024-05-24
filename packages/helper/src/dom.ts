@@ -77,7 +77,8 @@ export function getRangePosition(blockId: string, offset: number, el: HTMLElemen
   const n = el.querySelector(`[data-id="${blockId}"]`)
 
   if (!n) {
-    throw new Error(`Cannot find node by block id(${blockId})`)
+    console.error(`Cannot find node by block id(${blockId})`)
+    return n
   }
 
   if ((n.firstChild?.textContent?.length ?? 0) === 0) {

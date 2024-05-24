@@ -16,6 +16,7 @@ let version = 1
 
 export function createSchemaApi() {
   const elements: MarkdanSchemaElement[] = []
+  const affectedElements = new Set<[string, 'add' | 'delete', (string[] | number)?]>()
 
   function createElement<T extends string>(type: T, groupIds: string[] = [], content = ''): MarkdanSchemaElement {
     return {
@@ -37,6 +38,8 @@ export function createSchemaApi() {
     }
     elements.splice(Math.max(0, idx - 1), 0, element)
 
+    affectedElements.add([element.id, 'add', Math.max(0, idx - 1)])
+
     return element
   }
 
@@ -47,22 +50,38 @@ export function createSchemaApi() {
     }
     elements.splice(idx, 0, element)
 
+    affectedElements.add([element.id, 'add', idx])
+
     return element
   }
 
   function append<T extends MarkdanSchemaElement>(element: T): T {
     elements.push(element)
 
+    affectedElements.add([element.id, 'add', elements.length - 2])
+
     return element
+  }
+
+  function splice<T extends MarkdanSchemaElement>(start: number, deleteCount: number, ...items: T[]) {
+    elements.slice(start, start + deleteCount).forEach((element) => {
+      affectedElements.add([element.id, 'delete', element.groupIds])
+    })
+    elements.splice(start, deleteCount, ...items)
+    items.forEach((item, index) => {
+      affectedElements.add([item.id, 'add', start + index - 1])
+    })
   }
 
   return {
     elements,
+    affectedElements,
 
     createElement,
     append,
     appendBefore,
     appendAfter,
+    splice,
   }
 }
 
