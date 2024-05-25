@@ -14,9 +14,16 @@ export interface MarkdanSchemaElement {
 
 let version = 1
 
+export interface AffectedElement {
+  id: string
+  behavior: 'add' | 'change' | 'delete'
+  prevIndex?: number
+  groupIds?: string[]
+}
+
 export function createSchemaApi() {
   const elements: MarkdanSchemaElement[] = []
-  const affectedElements = new Set<[string, 'add' | 'delete', (string[] | number)?]>()
+  const affectedElements = new Set<AffectedElement>()
 
   function createElement<T extends string>(type: T, groupIds: string[] = [], content = ''): MarkdanSchemaElement {
     return {
@@ -38,7 +45,12 @@ export function createSchemaApi() {
     }
     elements.splice(Math.max(0, idx - 1), 0, element)
 
-    affectedElements.add([element.id, 'add', Math.max(0, idx - 1)])
+    // affectedElements.add([element.id, 'add', Math.max(0, idx - 1)])
+    affectedElements.add({
+      id: element.id,
+      behavior: 'add',
+      prevIndex: Math.max(0, idx - 1),
+    })
 
     return element
   }
@@ -50,7 +62,12 @@ export function createSchemaApi() {
     }
     elements.splice(idx, 0, element)
 
-    affectedElements.add([element.id, 'add', idx])
+    // affectedElements.add([element.id, 'add', idx])
+    affectedElements.add({
+      id: element.id,
+      behavior: 'add',
+      prevIndex: idx,
+    })
 
     return element
   }
@@ -58,18 +75,49 @@ export function createSchemaApi() {
   function append<T extends MarkdanSchemaElement>(element: T): T {
     elements.push(element)
 
-    affectedElements.add([element.id, 'add', elements.length - 2])
+    affectedElements.add({
+      id: element.id,
+      behavior: 'add',
+      prevIndex: elements.length - 2,
+    })
+
+    return element
+  }
+
+  function replace<T extends MarkdanSchemaElement>(element: T, id: T['id']): T {
+    const idx = elements.findIndex(item => item.id === id)
+    if (idx === -1) {
+      throw new Error('数据结构错误')
+    }
+    elements.splice(idx, 1, element)
+
+    affectedElements.add({
+      id: element.id,
+      behavior: 'change',
+    })
 
     return element
   }
 
   function splice<T extends MarkdanSchemaElement>(start: number, deleteCount: number, ...items: T[]) {
+    const deleteIds = new Set()
     elements.slice(start, start + deleteCount).forEach((element) => {
-      affectedElements.add([element.id, 'delete', element.groupIds])
+      if (!deleteIds.has(element.id) && !element.groupIds.some(id => deleteIds.has(id))) {
+        deleteIds.add(element.id)
+        affectedElements.add({
+          id: element.id,
+          behavior: 'delete',
+          groupIds: element.groupIds,
+        })
+      }
     })
     elements.splice(start, deleteCount, ...items)
     items.forEach((item, index) => {
-      affectedElements.add([item.id, 'add', start + index - 1])
+      affectedElements.add({
+        id: item.id,
+        behavior: 'add',
+        prevIndex: start + index - 1,
+      })
     })
   }
 
@@ -82,6 +130,7 @@ export function createSchemaApi() {
     appendBefore,
     appendAfter,
     splice,
+    replace,
   }
 }
 

@@ -1,4 +1,4 @@
-import { type Rectangle, amendTop, createRandomId, setOriginalRange } from '@markdan/helper'
+import { type Rectangle, amendTop, setOriginalRange } from '@markdan/helper'
 import type { MarkdanContext } from './apiCreateApp'
 
 export class EditorSelectionRange {
@@ -45,14 +45,17 @@ export class EditorSelectionRange {
 
     if (anchorIdx === focusIdx) {
       const element = elements[anchorIdx]
-      schema.splice(anchorIdx, 1, {
+      const minOffset = Math.min(anchorOffset, focusOffset)
+
+      schema.replace({
         ...element,
-        content: element.content.slice(0, Math.min(anchorOffset, focusOffset)) + element.content.slice(Math.max(anchorOffset, focusOffset)),
-      })
+        content: element.content.slice(0, minOffset) + element.content.slice(Math.max(anchorOffset, focusOffset)),
+      }, element.id)
+
+      this.setStart(this.anchorBlock, minOffset)
+      this.setEnd(this.anchorBlock, minOffset)
 
       emitter.emit('schema:change')
-
-      this.setEnd(this.anchorBlock, anchorOffset)
       emitter.emit('selection:change', this.#ctx.selection.ranges)
 
       return
@@ -82,16 +85,19 @@ export class EditorSelectionRange {
             : id
       }))]
     })
-    const id = createRandomId()
-    schema.splice(anchorIdx, focusIdx - anchorIdx + 1, {
+
+    schema.replace({
       ...anchorElement,
-      id,
       content: anchorElement.content.slice(0, anchorOffset) + focusElement.content.slice(focusOffset),
-    })
+    }, anchorElement.id)
+    schema.splice(
+      anchorIdx + 1, focusIdx - anchorIdx + 1,
+      ...tailElements,
+    )
+
+    this.setRange(anchorElement.id, anchorOffset, anchorElement.id, anchorOffset)
 
     emitter.emit('schema:change')
-
-    this.setRange(id, anchorOffset, id, anchorOffset)
     emitter.emit('selection:change', this.#ctx.selection.ranges)
   }
 

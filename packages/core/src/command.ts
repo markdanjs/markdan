@@ -67,10 +67,10 @@ export function deleteContentCommand(ctx: MarkdanContext) {
       const element = elements[idx]
 
       if (anchorOffset !== 0) {
-        schema.splice(idx, 1, {
-          ...elements[idx],
+        schema.replace({
+          ...element,
           content: `${element.content.slice(0, anchorOffset - 1)}${element.content.slice(anchorOffset)}`,
-        })
+        }, element.id)
 
         range.setRange(anchorBlock, anchorOffset - 1, anchorBlock, anchorOffset - 1)
       } else {
@@ -133,11 +133,6 @@ export function breakLineCommand(ctx: MarkdanContext) {
 
     if (content.slice(range.focusOffset) === '' && tailElements.length === 0) {
       // 后面内容为空，直接起一个新行
-      schema.splice(idx, 1, {
-        ...elements[idx],
-        content: content.slice(0, range.anchorOffset),
-      })
-
       const newLine = ctx.schema.createElement('paragraph', [], '')
 
       schema.splice(idx + 1, Math.max(0, tailElements.length - 1), newLine)
@@ -168,24 +163,24 @@ export function breakLineCommand(ctx: MarkdanContext) {
           content: content.slice(range.focusOffset),
           groupIds: groupIds.map(i => map.get(i) ?? i),
         },
-        ...tailElements.map((el) => {
-          el.groupIds = el.groupIds.map(i => map.get(i) ?? i)
-          return el
-        }),
       ]
 
-      schema.splice(idx, 1, {
+      schema.replace({
         ...elements[idx],
         content: content.slice(0, range.anchorOffset),
+      }, elements[idx].id)
+      schema.splice(idx + 1, 0, ...newLines)
+
+      tailElements.forEach((el) => {
+        el.groupIds = el.groupIds.map(i => map.get(i) ?? i)
+        schema.replace(el, el.id)
+        return el
       })
 
-      schema.splice(idx + 1, Math.max(0, tailElements.length - 1), ...newLines)
       range.setRange(map.get(id)!, 0, map.get(id)!, 0)
     }
   })
 
   ctx.emitter.emit('schema:change')
   ctx.emitter.emit('selection:change', ctx.selection.ranges)
-
-  ctx.interface.renderer.scrollIfCurrentRangeOutOfViewer()
 }

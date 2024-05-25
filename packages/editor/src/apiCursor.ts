@@ -81,6 +81,7 @@ function addCursor(range: EditorSelectionRange, ctx: MarkdanContext) {
     uid,
   } = range
   const rect = getRangePosition(focusBlock, focusOffset, mainViewer)
+
   if (!rect) return
   const viewLeft = rect.left - x
   const viewTop = rect.top - y
