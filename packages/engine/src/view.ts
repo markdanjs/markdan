@@ -27,15 +27,20 @@ export function parseSchema(ctx: MarkdanContext) {
   // 再结合旧的 view blocks
   // 生成新的 view blocks
   // 同时生成一份受影响的 viewLines 集合
-  affectedElements.forEach(([id, behavior, previewIndexOrGroupIds]) => {
+
+  affectedElements.forEach(({
+    id,
+    behavior,
+    prevIndex,
+    groupIds,
+  }) => {
     if (behavior === 'delete') {
-      const groupIds = previewIndexOrGroupIds as string[]
-      const parent = getViewBlock(groupIds, viewBlocks)
+      const parent = getViewBlock(groupIds!, viewBlocks)
       parent.splice(parent.findIndex(el => el.id === id), 1)
-      if (!groupIds[0]) {
+      if (!groupIds![0]) {
         affectedViewLines.add([id, 'delete'])
       } else {
-        affectedViewLines.add([groupIds[0], 'change'])
+        affectedViewLines.add([groupIds![0], 'change'])
       }
     } else {
       const idx = elements.findIndex(item => item.id === id)
@@ -45,26 +50,36 @@ export function parseSchema(ctx: MarkdanContext) {
       // 找到受影响元素在 viewBlocks 中的父级元素
       // 需要注意这是一个 children 的引用，操作时需要采用对原数组产生影响的方法 splice / push 等
       const parent = getViewBlock(element.groupIds, viewBlocks)
-      if (previewIndexOrGroupIds === -1) {
-        parent.push({ ...element })
+      if (behavior === 'change') {
+        const oldElementIdx = parent.findIndex(item => item.id === element.id)
+        const oldElement = parent[oldElementIdx]
+        if (oldElement.children) {
+          (element as MarkdanViewBlock).children = oldElement.children
+        }
+        parent.splice(oldElementIdx, 1, { ...element })
+        affectedViewLines.add([element.groupIds[0] ?? element.id, 'change'])
       } else {
-        // 在 parent 中寻找前一个 element
-        const previewViewBlockIndex = parent.findIndex(item => item.id === elements[previewIndexOrGroupIds as number]?.id)
-
-        if (previewViewBlockIndex === -1) {
-          // 找不到前一个元素，说明他前一个元素不在当前的块中
+        if (prevIndex === -1) {
           parent.push({ ...element })
         } else {
-          // 找到则在其后面插入
-          parent.splice(previewViewBlockIndex + 1, 0, { ...element })
+          // 在 parent 中寻找前一个 element
+          const previewViewBlockIndex = parent.findIndex(item => item.id === elements[prevIndex!]?.id)
+
+          if (previewViewBlockIndex === -1) {
+            // 找不到前一个元素，说明他前一个元素不在当前的块中
+            parent.push({ ...element })
+          } else {
+            // 找到则在其后面插入
+            parent.splice(previewViewBlockIndex + 1, 0, { ...element })
+          }
         }
-      }
-      if (!element.groupIds[0]) {
-        // 新增时需要知道一个位置
-        const anchorViewLineId = elements[idx - 1]?.groupIds?.[0] ?? elements[idx - 1]?.id
-        affectedViewLines.add([element.id, 'add', anchorViewLineId])
-      } else {
-        affectedViewLines.add([element.groupIds[0], 'change'])
+        if (!element.groupIds[0]) {
+          // 新增时需要知道一个位置
+          const anchorViewLineId = elements[idx - 1]?.groupIds?.[0] ?? elements[idx - 1]?.id
+          affectedViewLines.add([element.id, 'add', anchorViewLineId])
+        } else {
+          affectedViewLines.add([element.groupIds[0], 'change'])
+        }
       }
     }
   })
@@ -84,6 +99,7 @@ function getViewBlock(groupIds: string[], viewBlocks: MarkdanViewBlock[]) {
 
   while (idx < len) {
     item = parent.find(item => item.id === groupIds[idx])!
+
     parent = item.children ?? (item.children = [])
     idx++
   }

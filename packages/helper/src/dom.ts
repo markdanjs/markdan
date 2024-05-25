@@ -81,7 +81,7 @@ export function getRangePosition(blockId: string, offset: number, el: HTMLElemen
     return n
   }
 
-  if ((n.firstChild?.textContent?.length ?? 0) === 0) {
+  if (n.firstChild?.nodeType !== 3 || (n.firstChild?.textContent?.length ?? 0) === 0) {
     // 兼容空行
     return n.getBoundingClientRect()
   }
