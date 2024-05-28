@@ -43,9 +43,8 @@ export function createSchemaApi() {
     if (idx === -1) {
       throw new Error(`Cannot find element(${id})`)
     }
-    elements.splice(Math.max(0, idx - 1), 0, element)
+    elements.splice(idx, 0, element)
 
-    // affectedElements.add([element.id, 'add', Math.max(0, idx - 1)])
     affectedElements.add({
       id: element.id,
       behavior: 'add',
@@ -60,9 +59,8 @@ export function createSchemaApi() {
     if (idx === -1) {
       throw new Error(`Cannot find element(${id})`)
     }
-    elements.splice(idx, 0, element)
+    elements.splice(Math.min(elements.length, idx + 1), 0, element)
 
-    // affectedElements.add([element.id, 'add', idx])
     affectedElements.add({
       id: element.id,
       behavior: 'add',

@@ -9,7 +9,7 @@ import { registerEventHandler } from './events'
 import type { MarkdanSchema } from './schema'
 import { createSchemaApi } from './schema'
 import type { MarkdanCommand } from './command'
-import { breakLineCommand, createCommandApi, deleteContentCommand } from './command'
+import { breakLineCommand, createCommandApi, deleteContentCommand, insertCommand } from './command'
 import { type MarkdanPlugin, createPluginApi } from './plugin'
 
 export interface Markdan {
@@ -48,6 +48,7 @@ export interface MarkdanContext {
   interface: MarkdanInterface
   command: MarkdanCommand
   plugin: MarkdanPlugin
+  focused: boolean
 }
 
 export function createAppContext() {
@@ -62,6 +63,7 @@ export function createAppContext() {
     interface: {} as MarkdanInterface,
     command: {} as MarkdanCommand,
     plugin: {} as MarkdanPlugin,
+    focused: false,
   }
 
   ctx.selection = new EditorSelection(ctx)
@@ -70,6 +72,7 @@ export function createAppContext() {
 
   command.registerCommand('delete', deleteContentCommand)
   command.registerCommand('break-line', breakLineCommand)
+  command.registerCommand('insert', insertCommand)
 
   ctx.command = command
   ctx.plugin = plugin

@@ -114,6 +114,7 @@ export function createRendererApi(el: HTMLElement, ctx: MarkdanContext): EditorR
     onScroll({ x, y, action }: ScrollEventOptions) {
       if (x === undefined && y === undefined) {
         // 由滚动条内部发起的事件
+        this.virtualScrollRender()
       } else {
         ctx.interface.scrollbar[action === 'scrollBy' ? 'scrollBy' : 'scroll'](x, y)
       }
