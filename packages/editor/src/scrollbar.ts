@@ -158,7 +158,6 @@ export class ScrollBar {
 
   #handleMouseDown(e: MouseEvent) {
     e.preventDefault()
-    e.stopPropagation()
 
     const {
       config: {

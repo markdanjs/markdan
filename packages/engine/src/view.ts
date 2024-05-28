@@ -27,7 +27,6 @@ export function parseSchema(ctx: MarkdanContext) {
   // 再结合旧的 view blocks
   // 生成新的 view blocks
   // 同时生成一份受影响的 viewLines 集合
-
   affectedElements.forEach(({
     id,
     behavior,
@@ -52,11 +51,18 @@ export function parseSchema(ctx: MarkdanContext) {
       const parent = getViewBlock(element.groupIds, viewBlocks)
       if (behavior === 'change') {
         const oldElementIdx = parent.findIndex(item => item.id === element.id)
-        const oldElement = parent[oldElementIdx]
-        if (oldElement.children) {
-          (element as MarkdanViewBlock).children = oldElement.children
+        if (oldElementIdx === -1) {
+          parent.unshift({ ...element })
+        } else {
+          const oldElement = parent[oldElementIdx]
+
+          parent.splice(oldElementIdx, 1, {
+            ...element,
+            ...oldElement.children
+              ? { children: oldElement.children }
+              : null,
+          })
         }
-        parent.splice(oldElementIdx, 1, { ...element })
         affectedViewLines.add([element.groupIds[0] ?? element.id, 'change'])
       } else {
         if (prevIndex === -1) {

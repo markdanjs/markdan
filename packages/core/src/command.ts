@@ -125,6 +125,7 @@ export function breakLineCommand(ctx: MarkdanContext) {
     const {
       id,
       content,
+      type,
       groupIds,
     } = elements[idx]
 
@@ -135,52 +136,89 @@ export function breakLineCommand(ctx: MarkdanContext) {
       // 后面内容为空，直接起一个新行
       const newLine = ctx.schema.createElement('paragraph', [], '')
 
-      schema.splice(idx + 1, Math.max(0, tailElements.length - 1), newLine)
+      schema.appendAfter(newLine, id)
       range.setRange(newLine.id, 0, newLine.id, 0)
     } else {
-      const map = new Map<string, string>([[id, createRandomId()]])
-
+      // 保留行的元素更新截断处的内容，以及删除后续所有元素即可
+      const reservedElement = {
+        ...elements[idx],
+        content: content.slice(0, range.anchorOffset),
+      }
+      // 新起行继承所有格式
+      const idMapping = new Map<string, string>()
       const additionalElements = groupIds.reduce((prev, groupId) => {
         const el = elements.find(e => e.id === groupId)
         if (!el) {
           throw new Error('获取选区位置父级元素失败')
         }
-        map.set(groupId, createRandomId())
+        idMapping.set(groupId, createRandomId())
         return prev.concat({
           ...el,
-          id: map.get(groupId)!,
-          groupIds: el.groupIds.map(i => map.get(i) ?? i),
+          id: idMapping.get(groupId)!,
+          groupIds: el.groupIds.map(i => idMapping.get(i) ?? i),
           content: '',
         })
       }, [] as MarkdanSchemaElement[])
+      // 折断行新数据
+      const newElement = schema.createElement(
+        type,
+        groupIds.map(id => idMapping.get(id)!),
+        content.slice(range.focusOffset),
+      )
+      idMapping.set(id, newElement.id)
 
-      const newLines = [
+      // 1. 更新保留行
+      schema.replace(reservedElement, id)
+      // 2. 删除当前行剩余内容，并且增加新行数据
+      schema.splice(
+        idx + 1,
+        tailElements.length,
+        // 保留格式行
         ...additionalElements,
-        // 折断的元素
-        {
-          ...elements[idx],
-          id: map.get(id)!,
-          content: content.slice(range.focusOffset),
-          groupIds: groupIds.map(i => map.get(i) ?? i),
-        },
-      ]
-
-      schema.replace({
-        ...elements[idx],
-        content: content.slice(0, range.anchorOffset),
-      }, elements[idx].id)
-      schema.splice(idx + 1, 0, ...newLines)
-
-      tailElements.forEach((el) => {
-        el.groupIds = el.groupIds.map(i => map.get(i) ?? i)
-        schema.replace(el, el.id)
-        return el
-      })
-
-      range.setRange(map.get(id)!, 0, map.get(id)!, 0)
+        // 折断行
+        newElement,
+        // 剩余行
+        ...tailElements.map((item) => {
+          return {
+            ...item,
+            groupIds: item.groupIds.map(i => idMapping.get(i)!),
+          }
+        }),
+      )
+      // 3. 让焦点位于新元素开始的位置
+      range.setRange(newElement.id, 0, newElement.id, 0)
     }
   })
 
+  ctx.emitter.emit('schema:change')
+  ctx.emitter.emit('selection:change', ctx.selection.ranges)
+}
+
+/**
+ * 插入
+ */
+export function insertCommand(ctx: MarkdanContext, value: string) {
+  // 删除选区内容
+  ctx.selection.ranges.forEach((range) => {
+    if (!range.isCollapsed) {
+      range.collapse()
+    }
+  })
+
+  // 新增
+  const { schema } = ctx
+  const { elements } = schema
+
+  ctx.selection.ranges.forEach((range) => {
+    const element = elements.find(el => el.id === range.anchorBlock)
+    if (!element) return
+
+    schema.replace({
+      ...element,
+      content: `${element.content.slice(0, range.anchorOffset)}${value}${element.content.slice(range.anchorOffset)}`,
+    }, element.id)
+    range.setRange(element.id, range.anchorOffset + value.length, element.id, range.anchorOffset + value.length)
+  })
   ctx.emitter.emit('schema:change')
   ctx.emitter.emit('selection:change', ctx.selection.ranges)
 }

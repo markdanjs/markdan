@@ -22,6 +22,7 @@ export interface EditorUI {
   lineNumber: HTMLElement
   container: HTMLElement
   mainViewer: HTMLElement
+  virtualInput: HTMLTextAreaElement
   footer: HTMLElement
 }
 export interface MarkdanInterface {
@@ -98,7 +99,10 @@ function createEditorUI(ctx: MarkdanContext): EditorUI {
   const scrollbar = createElement('div', null)
 
   const mainViewer = createElement('div', { class: CLASS_NAMES.editorViewer })
-  const container = createElement('div', { class: CLASS_NAMES.editorContainer }, [mainViewer])
+  const virtualInput = createElement('textarea', {
+    style: 'position: fixed; left: 0; top: 0;',
+  })
+  const container = createElement('div', { class: CLASS_NAMES.editorContainer }, [mainViewer, virtualInput])
 
   const toolbar = createElement('header', { class: CLASS_NAMES.editorToolbar })
   const main = createElement(
@@ -116,7 +120,7 @@ function createEditorUI(ctx: MarkdanContext): EditorUI {
     return `${acc}--${curr[0].replace(/[A-Z]/, $1 => `-${$1.toLowerCase()}`)}: ${typeof curr[1] === 'string' ? curr[1] : `${curr[1]}px`};`
   }, '')
 
-  const ui: EditorUI = ctx.interface.ui = {
+  ctx.interface.ui = {
     markdan,
     toolbar,
     main,
@@ -125,10 +129,11 @@ function createEditorUI(ctx: MarkdanContext): EditorUI {
     lineNumber,
     container,
     mainViewer,
+    virtualInput,
     footer,
   }
 
-  return ui
+  return ctx.interface.ui
 }
 
 function init(el: HTMLElement, ctx: MarkdanContext) {
@@ -173,6 +178,9 @@ function init(el: HTMLElement, ctx: MarkdanContext) {
   })
 
   setTimeout(() => {
+    ctx.interface.ui.markdan.addEventListener('mousedown', () => {
+      ctx.emitter.emit('editor:focus')
+    })
     ctx.interface.ui.container.addEventListener('mousedown', (e: MouseEvent) => {
       ctx.emitter.emit('editor:mouse:down', e)
     })
