@@ -33,3 +33,15 @@ export function isOnlyShiftKey(e: string[] | MouseEvent | KeyboardEvent) {
 
   return keys.length === 1 && keys[0] === 'shiftKey'
 }
+
+export function isOnlyCtrlKey(e: string[] | MouseEvent | KeyboardEvent) {
+  const keys = isArray(e) ? e : getModifierKeys(e)
+
+  return keys.length === 1 && keys[0] === 'ctrlKey'
+}
+
+export function isBothCtrlAndShiftKeys(e: string[] | MouseEvent | KeyboardEvent) {
+  const keys = isArray(e) ? e : getModifierKeys(e)
+
+  return keys.length === 2 && keys.every(key => key === 'ctrlKey' || key === 'shiftKey')
+}

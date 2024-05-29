@@ -1,5 +1,6 @@
-import { type Rectangle, amendTop, setOriginalRange } from '@markdan/helper'
+import { type Rectangle, amendTop, isPointInRect, setOriginalRange } from '@markdan/helper'
 import type { MarkdanContext } from './apiCreateApp'
+import { getMouseOverElement } from './selection'
 
 export class EditorSelectionRange {
   #ctx: MarkdanContext
@@ -27,6 +28,44 @@ export class EditorSelectionRange {
   get isCollapsed() {
     return this.anchorBlock === this.focusBlock
       && this.anchorOffset === this.focusOffset
+  }
+
+  /** 物理选区，从左到右，从上到下 */
+  get physicsRange() {
+    const {
+      anchorBlock,
+      anchorOffset,
+      focusBlock,
+      focusOffset,
+    } = this
+    const { elements } = this.#ctx.schema
+    if (anchorBlock === focusBlock) {
+      return {
+        anchorBlock,
+        anchorOffset: Math.min(anchorOffset, focusOffset),
+        focusBlock,
+        focusOffset: Math.max(anchorOffset, focusOffset),
+      }
+    }
+
+    const anchorBlockIdx = elements.findIndex(item => item.id === anchorBlock)
+    const focusBlockIdx = elements.findIndex(item => item.id === focusBlock)
+
+    if (anchorBlockIdx > focusBlockIdx) {
+      return {
+        anchorBlock: focusBlock,
+        anchorOffset: focusOffset,
+        focusBlock: anchorBlock,
+        focusOffset: anchorOffset,
+      }
+    }
+
+    return {
+      anchorBlock,
+      anchorOffset,
+      focusBlock,
+      focusOffset,
+    }
   }
 
   /**
@@ -122,6 +161,158 @@ export class EditorSelectionRange {
     this.focusOffset = focusOffset
     this.setRangeRectangle()
     return this
+  }
+
+  getEndBy(
+    type: 'prev' | 'next' | 'line-start' | 'line-end' | 'first' | 'end' | 'prev-line' | 'next-line',
+  ) {
+    const { elements } = this.#ctx.schema
+    const {
+      anchorBlock,
+      anchorOffset,
+      focusBlock,
+      focusOffset,
+    } = this
+
+    let block: string
+    let offset: number
+
+    // 上一行 / 下一行
+    if (['prev-line', 'next-line'].includes(type)) {
+      const oCursor = this.#ctx.interface.ui.cursor.querySelector(`[data-anchor-block="${anchorBlock}"][data-anchor-offset="${anchorOffset}"][data-focus-block="${focusBlock}"][data-focus-offset="${focusOffset}"]`)!
+      const { height, left: x, top } = oCursor.getBoundingClientRect()
+
+      const y = top + (type === 'prev-line' ? -2 : height + 2)
+
+      ;({ block, offset } = getMouseOverElement({ x, y }, this.#ctx))
+    } else if (type === 'first') {
+      // 第一行行首
+      block = elements[0].id
+      offset = 0
+    } else if (type === 'end') {
+      // 最后一行行尾
+      block = elements.at(-1)!.id
+      offset = elements.at(-1)!.content.length
+    } else {
+      const elementIdx = elements.findIndex(item => item.id === focusBlock)
+      const element = elements[elementIdx]!
+      const viewLineId = element.groupIds[0] ?? element.id
+      // 当前行首
+      if (type === 'line-start') {
+        block = viewLineId
+        offset = 0
+      } else if (type === 'line-end') {
+        // 当前行尾
+        let idx = elementIdx + 1
+        while (elements[idx]?.groupIds[0] === viewLineId) {
+          idx++
+        }
+        block = elements[idx - 1].id
+        offset = elements[idx - 1].content.length
+      } else if (type === 'prev') {
+        // 前一个字符
+        if (focusOffset === 0) {
+          if (elementIdx === 0) {
+            block = element.id
+            offset = 0
+          } else {
+            block = elements[elementIdx - 1].id
+            offset = elements[elementIdx - 1].content.length
+          }
+        } else {
+          block = focusBlock
+          offset = focusOffset - 1
+        }
+      } else if (focusOffset === element.content.length) {
+        // 后一个字符 type === 'next'
+        if (elementIdx === elements.length - 1) {
+          block = elements.at(-1)!.id
+          offset = focusOffset
+        } else {
+          block = elements[elementIdx + 1].id
+          offset = 0
+        }
+      } else {
+        block = focusBlock
+        offset = focusOffset + 1
+      }
+    }
+
+    // 选区位置检测
+    try {
+      const range = new Range()
+      const element = this.#ctx.interface.ui.mainViewer.querySelector<HTMLElement>(`[data-id="${block}"]`)!
+      setOriginalRange(range, element, offset, 'Both')
+
+      const rect = range.getBoundingClientRect()
+      const {
+        config: {
+          containerRect: {
+            x,
+            y,
+            width,
+            height,
+          },
+          scrollbarSize,
+        },
+        emitter,
+      } = this.#ctx
+
+      const point = { x: rect.x, y: rect.y }
+      const isOutOfContainer = !isPointInRect(point, {
+        x,
+        y,
+        width: width - scrollbarSize - 4,
+        height: height - scrollbarSize - 4,
+      })
+
+      if (isOutOfContainer) {
+        // 当前指针没在容器内部，让容器滚动
+        emitter.emit('scrollbar:change', {
+          x: point.x > x + width - scrollbarSize
+            ? point.x - (x + width - scrollbarSize)
+            : point.x < x
+              ? point.x - x
+              : 0,
+          y: point.y > height - y - scrollbarSize
+            ? point.y - (height - y - scrollbarSize)
+            : point.y < y
+              ? point.y - y
+              : 0,
+          action: 'scrollBy',
+        })
+      }
+    } catch (err) {
+      // 当前内容没被渲染到容器，让容器滚动到指定位置
+      const {
+        config: { containerRect, scrollbarSize },
+        schema: { elements },
+        renderedElements,
+        emitter,
+        interface: { scrollbar },
+      } = this.#ctx
+
+      const element = elements.find(item => item.id === block)!
+      const viewLine = renderedElements.find(item => item.id === (element.groupIds[0] ?? element.id))!
+      let x = 0
+      let y = 0
+      if (viewLine.y > containerRect.height - containerRect.y - scrollbarSize) {
+        y = viewLine.y - (containerRect.height - containerRect.y - scrollbarSize)
+        x = viewLine.x + viewLine.width
+      } else if (viewLine.y < containerRect.y) {
+        y = -scrollbar.scrollY
+        x = -scrollbar.scrollX
+      }
+
+      // 当前指针没在容器内部，让容器滚动
+      emitter.emit('scrollbar:change', {
+        x,
+        y,
+        action: 'scrollBy',
+      })
+    }
+
+    return { block, offset }
   }
 
   setRangeRectangle() {

@@ -1,9 +1,9 @@
 import type { Point, Rectangle } from '@markdan/helper'
-import { getBlockIdByNode, getBlockPositionByClick, getIntersectionArea, getModifierKeys, isOnlyAltKey, isOnlyShiftKey, isPointInRect, isRectContainRect, isRectCross } from '@markdan/helper'
+import { getBlockIdByNode, getBlockPositionByClick, getIntersectionArea, getModifierKeys, isBothCtrlAndShiftKeys, isOnlyAltKey, isOnlyCtrlKey, isOnlyShiftKey, isPointInRect, isRectContainRect, isRectCross } from '@markdan/helper'
 import type { MarkdanContext } from './apiCreateApp'
 import { EditorSelectionRange } from './range'
 
-function getMouseOverElement(point: Point, ctx: MarkdanContext) {
+export function getMouseOverElement(point: Point, ctx: MarkdanContext) {
   const {
     config: {
       containerRect,
@@ -251,6 +251,71 @@ export class EditorSelection {
     }, this.#ctx)
 
     this.setRange(block, offset)
+  }
+
+  /**
+   * 使用键盘选择
+   * 1. 无辅助按键
+   *    - 选区闭合，根据方向将选区移动
+   *    - 选区不闭合，左右方向将选区闭合（不删除内容）；上下方向则将选区上下移动，同时将选区闭合（不删除内容）
+   * 2. 存在辅助按键
+   *    - 单独按住 ctrl，根据方向移动到行首/行尾/页首/页尾，同时将选区闭合（不删除内容）
+   *    - 单独按住 shift，根据方向将 focus 改变
+   *    - 同时按住 ctrl + shift，根据方向将 focus 移动到行首/行尾/页首/页尾
+   */
+  handleKeyboardSelect(e: KeyboardEvent) {
+    const modifierKeys = getModifierKeys(e)
+    const { key } = e
+
+    const isUp = key === 'ArrowUp'
+    const isLeft = key === 'ArrowLeft'
+    const isRight = key === 'ArrowRight'
+
+    this.ranges.forEach((range) => {
+      if (isOnlyCtrlKey(modifierKeys)) {
+        // 单独按住 ctrl，根据方向移动到行首/行尾/页首/页尾，同时将选区 focus 同步 anchor
+        const { block, offset } = range.getEndBy({ ArrowUp: 'first', ArrowRight: 'line-end', ArrowDown: 'end', ArrowLeft: 'line-start' }[key] as any)
+        range.setRange(block, offset, block, offset)
+      } else if (isOnlyShiftKey(modifierKeys)) {
+        // 单独按住 shift，根据方向将 focus 改变
+        const { block, offset } = range.getEndBy({ ArrowUp: 'prev-line', ArrowRight: 'next', ArrowDown: 'next-line', ArrowLeft: 'prev' }[key] as any)
+        range.setEnd(block, offset)
+      } else if (isBothCtrlAndShiftKeys(modifierKeys)) {
+        // 同时按住 ctrl + shift，根据方向将 focus 移动到行首/行尾/页首/页尾
+        const { block, offset } = range.getEndBy({ ArrowUp: 'first', ArrowRight: 'line-end', ArrowDown: 'end', ArrowLeft: 'line-start' }[key] as any)
+        range.setEnd(block, offset)
+      } else {
+        if (range.isCollapsed) {
+          const { block, offset } = range.getEndBy({ ArrowUp: 'prev-line', ArrowRight: 'next', ArrowDown: 'next-line', ArrowLeft: 'prev' }[key] as any)
+          range.setRange(block, offset, block, offset)
+        } else {
+          // 选区不闭合，左右方向将选区闭合（不删除内容）；上下方向则将选区上下移动，同时将选区闭合（不删除内容）
+          if (isLeft) {
+            range.setRange(
+              range.physicsRange.anchorBlock,
+              range.physicsRange.anchorOffset,
+              range.physicsRange.anchorBlock,
+              range.physicsRange.anchorOffset,
+            )
+          } else if (isRight) {
+            range.setRange(
+              range.physicsRange.focusBlock,
+              range.physicsRange.focusOffset,
+              range.physicsRange.focusBlock,
+              range.physicsRange.focusOffset,
+            )
+          } else {
+            const { block, offset } = range.getEndBy(isUp ? 'prev-line' : 'next-line')
+            range.setRange(block, offset, block, offset)
+          }
+        }
+      }
+    })
+    const ranges = this.#getIntersectionRanges()
+    ranges.map((r) => {
+      return this.removeRange(r)
+    })
+    this.#ctx.emitter.emit('selection:change', this.ranges)
   }
 
   /**

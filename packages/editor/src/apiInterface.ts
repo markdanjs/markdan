@@ -100,7 +100,7 @@ function createEditorUI(ctx: MarkdanContext): EditorUI {
 
   const mainViewer = createElement('div', { class: CLASS_NAMES.editorViewer })
   const virtualInput = createElement('textarea', {
-    style: 'position: fixed; left: 0; top: 0;',
+    style: 'position: fixed; left: -99999px; top: -99999px;',
   })
   const container = createElement('div', { class: CLASS_NAMES.editorContainer }, [mainViewer, virtualInput])
 
