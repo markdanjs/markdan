@@ -267,6 +267,32 @@ export class EditorSelection {
     const modifierKeys = getModifierKeys(e)
     const { key } = e
 
+    if (key === 'a') {
+      e.preventDefault()
+      this.removeAllRanges()
+      const {
+        schema: { elements },
+        renderedElements,
+        emitter,
+      } = this.#ctx
+
+      const viewLine = renderedElements.at(-1)!
+      emitter.emit('scrollbar:change', {
+        x: viewLine.width,
+        y: viewLine.y,
+        action: 'scrollBy',
+      })
+
+      this.addRange(
+        elements[0].id,
+        0,
+        elements.at(-1)!.id,
+        elements.at(-1)!.content.length,
+      )
+      this.#ctx.emitter.emit('selection:change', this.ranges)
+      return
+    }
+
     const isUp = key === 'ArrowUp'
     const isLeft = key === 'ArrowLeft'
     const isRight = key === 'ArrowRight'

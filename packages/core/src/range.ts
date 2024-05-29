@@ -340,26 +340,15 @@ export class EditorSelectionRange {
       renderedElements,
     } = this.#ctx
 
-    let {
+    const {
       anchorBlock,
       anchorOffset,
       focusBlock,
       focusOffset,
-    } = this
+    } = this.physicsRange
 
-    let aIdx = elements.findIndex(item => item.id === anchorBlock)
-    let fIdx = elements.findIndex(item => item.id === focusBlock)
-    if (aIdx > fIdx || (aIdx === fIdx && anchorOffset > focusOffset)) {
-      // 交换
-      [
-        anchorBlock,
-        anchorOffset,
-        focusBlock,
-        focusOffset,
-        aIdx,
-        fIdx,
-      ] = [focusBlock, focusOffset, anchorBlock, anchorOffset, fIdx, aIdx]
-    }
+    const aIdx = elements.findIndex(item => item.id === anchorBlock)
+    const fIdx = elements.findIndex(item => item.id === focusBlock)
 
     const rectangles: Rectangle[] = []
 
@@ -431,6 +420,14 @@ export class EditorSelectionRange {
         width: startRect.width,
         height: startViewLineRenderedElement.height,
       }
+    } else if (anchorBlockElement.groupIds.length === 0 && anchorOffset === 0) {
+      // 是否完全选择了 start
+      start = {
+        x: startViewLineRenderedElement.x - scrollX,
+        y: startViewLineRenderedElement.y - scrollY,
+        width: startViewLineRenderedElement.width,
+        height: startViewLineRenderedElement.height,
+      }
     }
 
     if (focusDom) {
@@ -445,6 +442,14 @@ export class EditorSelectionRange {
         x: endRect.x - x,
         y: endViewLineRenderedElement.y - scrollY,
         width: endRect.width,
+        height: endViewLineRenderedElement.height,
+      }
+    } else if (!elements[fIdx + 1]?.groupIds.includes(endViewLineId) && focusOffset === focusBlockElement.content.length) {
+      // 是否完全选择了 end
+      end = {
+        x: endViewLineRenderedElement.x - scrollX,
+        y: endViewLineRenderedElement.y - scrollY,
+        width: endViewLineRenderedElement.width,
         height: endViewLineRenderedElement.height,
       }
     }
