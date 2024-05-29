@@ -48,10 +48,16 @@ export function registerEventHandler(ctx: MarkdanContext) {
 
   function handleKeydown(e: KeyboardEvent) {
     const { key } = e
+
     switch (key) {
       case 'Backspace':
         ctx.command.executeCommand('delete')
         break
+      case 'ArrowUp':
+      case 'ArrowRight':
+      case 'ArrowDown':
+      case 'ArrowLeft':
+        ctx.selection.handleKeyboardSelect(e)
         break
       default:
         break
