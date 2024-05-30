@@ -1,5 +1,5 @@
 import type { MarkdanViewBlock } from '@markdan/engine'
-import { type Point, clickOutside, throttle } from '@markdan/helper'
+import { type Point, clickOutside, isOnlyCtrlKey, throttle } from '@markdan/helper'
 import type { MarkdanContext } from './index'
 
 export function registerEventHandler(ctx: MarkdanContext) {
@@ -58,6 +58,11 @@ export function registerEventHandler(ctx: MarkdanContext) {
       case 'ArrowDown':
       case 'ArrowLeft':
         ctx.selection.handleKeyboardSelect(e)
+        break
+      case 'a':
+        if (isOnlyCtrlKey(e)) {
+          ctx.selection.handleKeyboardSelect(e)
+        }
         break
       default:
         break
