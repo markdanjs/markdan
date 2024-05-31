@@ -46,6 +46,7 @@ export function createRendererApi(el: HTMLElement, ctx: MarkdanContext): EditorR
         },
         viewBlocks,
       } = ctx
+
       const viewLineElements = new Set<[HTMLElement | null, ...AffectedViewLine]>()
 
       affectedViewLines.forEach(([viewLineId, behavior, previewId]) => {

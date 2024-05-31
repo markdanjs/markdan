@@ -222,3 +222,13 @@ export function insertCommand(ctx: MarkdanContext, value: string) {
   ctx.emitter.emit('schema:change')
   ctx.emitter.emit('selection:change', ctx.selection.ranges)
 }
+
+// 重做
+export function redoCommand(ctx: MarkdanContext) {
+  ctx.history.redo()
+}
+
+// 撤销
+export function undoCommand(ctx: MarkdanContext) {
+  ctx.history.undo()
+}

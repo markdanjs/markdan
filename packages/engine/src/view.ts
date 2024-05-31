@@ -27,6 +27,7 @@ export function parseSchema(ctx: MarkdanContext) {
   // 再结合旧的 view blocks
   // 生成新的 view blocks
   // 同时生成一份受影响的 viewLines 集合
+  const deleteIds = new Set()
   affectedElements.forEach(({
     id,
     behavior,
@@ -38,6 +39,7 @@ export function parseSchema(ctx: MarkdanContext) {
       parent.splice(parent.findIndex(el => el.id === id), 1)
       if (!groupIds![0]) {
         affectedViewLines.add([id, 'delete'])
+        deleteIds.add(id)
       } else {
         affectedViewLines.add([groupIds![0], 'change'])
       }
@@ -91,6 +93,12 @@ export function parseSchema(ctx: MarkdanContext) {
   })
 
   affectedElements.clear()
+
+  affectedViewLines.forEach((item) => {
+    if (deleteIds.has(item[0]) && item[1] !== 'delete') {
+      affectedViewLines.delete(item)
+    }
+  })
 
   return affectedViewLines
 }

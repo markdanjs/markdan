@@ -1,4 +1,6 @@
 import { createRandomId } from '@markdan/helper'
+import type { HistoryRecordItem } from './history'
+import type { MarkdanContext } from '.'
 
 export interface MarkdanSchemaElement {
   id: string
@@ -21,9 +23,11 @@ export interface AffectedElement {
   groupIds?: string[]
 }
 
-export function createSchemaApi() {
+export function createSchemaApi(ctx: MarkdanContext) {
   const elements: MarkdanSchemaElement[] = []
   const affectedElements = new Set<AffectedElement>()
+
+  let trace = true
 
   function createElement<T extends string>(type: T, groupIds: string[] = [], content = ''): MarkdanSchemaElement {
     return {
@@ -43,13 +47,22 @@ export function createSchemaApi() {
     if (idx === -1) {
       throw new Error(`Cannot find element(${id})`)
     }
-    elements.splice(idx, 0, element)
+
+    trace && ctx.history.record([{
+      action: 'add',
+      element,
+      index: Math.max(0, idx - 1),
+      ranges: [...ctx.selection.ranges.values()].map(({ id, anchorBlock, anchorOffset, focusBlock, focusOffset }) => ({ id, anchorBlock, anchorOffset, focusBlock, focusOffset })),
+      currentRangeId: ctx.selection.currentRange?.id,
+    }])
 
     affectedElements.add({
       id: element.id,
       behavior: 'add',
       prevIndex: Math.max(0, idx - 1),
     })
+
+    elements.splice(idx, 0, element)
 
     return element
   }
@@ -59,7 +72,15 @@ export function createSchemaApi() {
     if (idx === -1) {
       throw new Error(`Cannot find element(${id})`)
     }
-    elements.splice(Math.min(elements.length, idx + 1), 0, element)
+
+    // 记录操作
+    trace && ctx.history.record([{
+      action: 'add',
+      element: { ...element },
+      index: idx,
+      ranges: [...ctx.selection.ranges.values()].map(({ id, anchorBlock, anchorOffset, focusBlock, focusOffset }) => ({ id, anchorBlock, anchorOffset, focusBlock, focusOffset })),
+      currentRangeId: ctx.selection.currentRange?.id,
+    }])
 
     affectedElements.add({
       id: element.id,
@@ -67,17 +88,28 @@ export function createSchemaApi() {
       prevIndex: idx,
     })
 
+    elements.splice(Math.min(elements.length, idx + 1), 0, element)
+
     return element
   }
 
   function append<T extends MarkdanSchemaElement>(element: T): T {
-    elements.push(element)
-
     affectedElements.add({
       id: element.id,
       behavior: 'add',
-      prevIndex: elements.length - 2,
+      prevIndex: elements.length - 1,
     })
+
+    // 记录操作
+    trace && ctx.history.record([{
+      action: 'add',
+      element: { ...element },
+      index: elements.length - 1,
+      ranges: [...ctx.selection.ranges.values()].map(({ id, anchorBlock, anchorOffset, focusBlock, focusOffset }) => ({ id, anchorBlock, anchorOffset, focusBlock, focusOffset })),
+      currentRangeId: ctx.selection.currentRange?.id,
+    }])
+
+    elements.push(element)
 
     return element
   }
@@ -87,25 +119,50 @@ export function createSchemaApi() {
     if (idx === -1) {
       throw new Error('数据结构错误')
     }
-    elements.splice(idx, 1, element)
 
     affectedElements.add({
       id: element.id,
       behavior: 'change',
     })
 
+    // 记录操作
+    if (trace) {
+      ctx.history.record([{
+        action: 'change',
+        element: { ...element },
+        oldElement: { ...elements[idx] },
+        ranges: [...ctx.selection.ranges.values()].map(({ id, anchorBlock, anchorOffset, focusBlock, focusOffset }) => ({ id, anchorBlock, anchorOffset, focusBlock, focusOffset })),
+        currentRangeId: ctx.selection.currentRange?.id,
+      }])
+    }
+
+    elements.splice(idx, 1, element)
+
     return element
   }
 
   function splice<T extends MarkdanSchemaElement>(start: number, deleteCount: number, ...items: T[]) {
     const deleteIds = new Set()
-    elements.slice(start, start + deleteCount).forEach((element) => {
+
+    const historyRecords: HistoryRecordItem[] = []
+
+    elements.slice(start, start + deleteCount).forEach((element, index) => {
       if (!deleteIds.has(element.id) && !element.groupIds.some(id => deleteIds.has(id))) {
         deleteIds.add(element.id)
         affectedElements.add({
           id: element.id,
           behavior: 'delete',
           groupIds: element.groupIds,
+        })
+
+        // 记录操作
+        trace && historyRecords.push({
+          action: 'delete',
+          element: { ...element },
+          index: start,
+          offset: index,
+          ranges: [...ctx.selection.ranges.values()].map(({ id, anchorBlock, anchorOffset, focusBlock, focusOffset }) => ({ id, anchorBlock, anchorOffset, focusBlock, focusOffset })),
+          currentRangeId: ctx.selection.currentRange?.id,
         })
       }
     })
@@ -116,12 +173,26 @@ export function createSchemaApi() {
         behavior: 'add',
         prevIndex: start + index - 1,
       })
+
+      // 记录操作
+      trace && historyRecords.push({
+        action: 'add',
+        element: { ...item },
+        index: start + index - 1,
+        ranges: [...ctx.selection.ranges.values()].map(({ id, anchorBlock, anchorOffset, focusBlock, focusOffset }) => ({ id, anchorBlock, anchorOffset, focusBlock, focusOffset })),
+        currentRangeId: ctx.selection.currentRange?.id,
+      })
     })
+    trace && ctx.history.record(historyRecords)
   }
 
   return {
     elements,
     affectedElements,
+
+    setTrace(val: boolean) {
+      trace = val
+    },
 
     createElement,
     append,

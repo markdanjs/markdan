@@ -64,6 +64,13 @@ export function registerEventHandler(ctx: MarkdanContext) {
           ctx.selection.handleKeyboardSelect(e)
         }
         break
+      case 'z':
+      case 'y':
+        if (isOnlyCtrlKey(e)) {
+          e.preventDefault()
+          ctx.command.executeCommand(key === 'z' ? 'undo' : 'redo')
+        }
+        break
       default:
         break
     }
