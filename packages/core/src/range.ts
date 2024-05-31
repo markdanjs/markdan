@@ -4,7 +4,7 @@ import { getMouseOverElement } from './selection'
 
 export class EditorSelectionRange {
   #ctx: MarkdanContext
-  #rectangles: Rectangle[] = []
+  #rectangles: Array<Rectangle & { _originY?: number }> = []
 
   constructor(
     public anchorBlock: string,
@@ -419,6 +419,7 @@ export class EditorSelectionRange {
         y: startViewLineRenderedElement.y - scrollY,
         width: startRect.width,
         height: startViewLineRenderedElement.height,
+        _originY: startViewLineRenderedElement.y,
       }
     } else if (anchorBlockElement.groupIds.length === 0 && anchorOffset === 0) {
       // 是否完全选择了 start
@@ -427,6 +428,12 @@ export class EditorSelectionRange {
         y: startViewLineRenderedElement.y - scrollY,
         width: startViewLineRenderedElement.width,
         height: startViewLineRenderedElement.height,
+      }
+    } else {
+      start = this.#rectangles[0]
+      if (start?._originY !== undefined) {
+        start.y = start._originY - scrollY
+        start.width -= 10
       }
     }
 
@@ -443,6 +450,7 @@ export class EditorSelectionRange {
         y: endViewLineRenderedElement.y - scrollY,
         width: endRect.width,
         height: endViewLineRenderedElement.height,
+        _originY: endViewLineRenderedElement.y,
       }
     } else if (!elements[fIdx + 1]?.groupIds.includes(endViewLineId) && focusOffset === focusBlockElement.content.length) {
       // 是否完全选择了 end
@@ -452,15 +460,17 @@ export class EditorSelectionRange {
         width: endViewLineRenderedElement.width,
         height: endViewLineRenderedElement.height,
       }
+    } else {
+      end = this.#rectangles.at(-1)
+
+      if (end?._originY !== undefined) {
+        end.y = end._originY - scrollY
+      }
     }
 
     if (start) {
       start.width = Math.max(10, start.width + 10) // 延长 10px 选择区
       rectangles.push(start)
-    }
-    if (end) {
-      end.width = Math.max(10, end.width)
-      rectangles.push(end)
     }
 
     const [sIdx, eIdx] = [
@@ -480,7 +490,11 @@ export class EditorSelectionRange {
 
         return null
       })
-    // }
+
+    if (end) {
+      end.width = Math.max(10, end.width)
+      rectangles.push(end)
+    }
 
     this.#rectangles = rectangles
   }
