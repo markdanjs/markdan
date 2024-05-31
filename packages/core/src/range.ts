@@ -1,10 +1,12 @@
-import { type Rectangle, amendTop, isPointInRect, setOriginalRange } from '@markdan/helper'
+import { type Rectangle, amendTop, createRandomId, isPointInRect, setOriginalRange } from '@markdan/helper'
 import type { MarkdanContext } from './apiCreateApp'
 import { getMouseOverElement } from './selection'
 
 export class EditorSelectionRange {
   #ctx: MarkdanContext
   #rectangles: Array<Rectangle & { _originY?: number }> = []
+
+  id: string = createRandomId()
 
   constructor(
     public anchorBlock: string,
@@ -14,7 +16,7 @@ export class EditorSelectionRange {
     ctx: MarkdanContext,
   ) {
     this.#ctx = ctx
-    this.setRangeRectangle()
+    // this.setRangeRectangle()
   }
 
   get uid() {
@@ -130,7 +132,7 @@ export class EditorSelectionRange {
       content: anchorElement.content.slice(0, anchorOffset) + focusElement.content.slice(focusOffset),
     }, anchorElement.id)
     schema.splice(
-      anchorIdx + 1, focusIdx - anchorIdx + 1,
+      anchorIdx + 1, focusIdx - anchorIdx,
       ...tailElements,
     )
 
@@ -143,14 +145,14 @@ export class EditorSelectionRange {
   setStart(block: string, offset: number): EditorSelectionRange {
     this.anchorBlock = block
     this.anchorOffset = offset
-    this.setRangeRectangle()
+    // this.setRangeRectangle()
     return this
   }
 
   setEnd(block: string, offset: number): EditorSelectionRange {
     this.focusBlock = block
     this.focusOffset = offset
-    this.setRangeRectangle()
+    // this.setRangeRectangle()
     return this
   }
 
@@ -159,7 +161,7 @@ export class EditorSelectionRange {
     this.anchorOffset = anchorOffset
     this.focusBlock = focusBlock
     this.focusOffset = focusOffset
-    this.setRangeRectangle()
+    // this.setRangeRectangle()
     return this
   }
 

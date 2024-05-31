@@ -24,6 +24,7 @@ export function patchRenderedElements(affectedElements: Set<[HTMLElement | null,
       },
       ui: { mainViewer },
     },
+    viewBlocks,
     renderedElements,
   } = ctx
 
@@ -51,18 +52,55 @@ export function patchRenderedElements(affectedElements: Set<[HTMLElement | null,
     } else if (behavior === 'add') {
       const { width, height, left } = oElement!.getBoundingClientRect()
       const originalElementIdx = renderedElements.findIndex(item => item.id === previewId)
+
       if (originalElementIdx === -1) {
-        // 空白页面增加数据
-        renderedElements.push({
-          id,
-          x: left - x + scrollX,
-          y: 0,
-          width,
-          height,
-          lineHeight,
-          element: oElement!,
-        })
-        oElement!.style.top = '0px'
+        // 找不到挂载位置，尝试查询 view-block 中的下一项
+        const viewBlockIndex = viewBlocks.findIndex(item => item.id === previewId)
+        if (viewBlockIndex !== -1) {
+          const nextIndex = renderedElements.findIndex(item => item.id === viewBlocks[viewBlockIndex + 2].id)
+          if (nextIndex !== -1) {
+            const y = renderedElements[nextIndex].y
+
+            // 之后所有行都需要增加一下 y 值
+            renderedElements.slice(nextIndex).forEach((el) => {
+              el.y += height
+            })
+
+            renderedElements.splice(nextIndex, 0, {
+              id,
+              x: left - x + scrollX,
+              y,
+              width,
+              height,
+              lineHeight,
+              element: oElement!,
+            })
+            oElement!.style.top = `${y}px`
+          } else {
+            renderedElements.splice(nextIndex, 0, {
+              id,
+              x: left - x + scrollX,
+              y: lastTop,
+              width,
+              height,
+              lineHeight,
+              element: oElement!,
+            })
+            oElement!.style.top = `${lastTop}px`
+          }
+        } else {
+          // 空白页面增加数据
+          renderedElements.push({
+            id,
+            x: left - x + scrollX,
+            y: 0,
+            width,
+            height,
+            lineHeight,
+            element: oElement!,
+          })
+          oElement!.style.top = `${0}px`
+        }
       } else {
         // 由于增加了一行，之后所有行都需要更新一下 y 值
         const prevElement = renderedElements[originalElementIdx]

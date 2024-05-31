@@ -169,6 +169,7 @@ function init(el: HTMLElement, ctx: MarkdanContext) {
     ctx.interface.lineNumber.setActive()
   })
   ctx.emitter.on('render', (blocks) => {
+    ctx.config.maxWidth = 0
     ctx.interface.renderer.render(blocks)
     ctx.interface.lineNumber.update()
   })

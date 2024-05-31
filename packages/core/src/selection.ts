@@ -108,6 +108,10 @@ export class EditorSelection {
     return this.#currentRange
   }
 
+  set currentRange(range: EditorSelectionRange | null) {
+    this.#currentRange = range
+  }
+
   get focusViewLine() {
     const currentRange = this.#currentRange
     if (!currentRange) {
@@ -132,32 +136,36 @@ export class EditorSelection {
     anchorOffset: EditorSelectionRange['anchorOffset'],
     focusBlock = anchorBlock,
     focusOffset = anchorOffset,
+    trigger = true,
   ) {
     const range = new EditorSelectionRange(anchorBlock, anchorOffset, focusBlock, focusOffset, this.#ctx)
     this.ranges.add(range)
     this.#currentRange = range
 
-    this.#ctx.emitter.emit('selection:change', this.ranges)
+    trigger && this.#ctx.emitter.emit('selection:change', this.ranges)
+    return range
   }
 
   setRange(
     focusBlock: EditorSelectionRange['focusBlock'],
     focusOffset: EditorSelectionRange['focusOffset'],
+    trigger = true,
   ) {
     this.#currentRange?.setEnd(focusBlock, focusOffset)
-    this.#ctx.emitter.emit('selection:change', this.ranges)
+    trigger && this.#ctx.emitter.emit('selection:change', this.ranges)
+    return this.#currentRange
   }
 
-  removeAllRanges() {
+  removeAllRanges(trigger = true) {
     this.ranges.clear()
 
-    this.#ctx.emitter.emit('selection:change', this.ranges)
+    trigger && this.#ctx.emitter.emit('selection:change', this.ranges)
   }
 
-  removeRange(range: EditorSelectionRange) {
+  removeRange(range: EditorSelectionRange, trigger = true) {
     this.ranges.delete(range)
 
-    this.#ctx.emitter.emit('selection:change', this.ranges)
+    trigger && this.#ctx.emitter.emit('selection:change', this.ranges)
   }
 
   /**

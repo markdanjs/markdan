@@ -9,8 +9,9 @@ import { registerEventHandler } from './events'
 import type { MarkdanSchema } from './schema'
 import { createSchemaApi } from './schema'
 import type { MarkdanCommand } from './command'
-import { breakLineCommand, createCommandApi, deleteContentCommand, insertCommand } from './command'
+import { breakLineCommand, createCommandApi, deleteContentCommand, insertCommand, redoCommand, undoCommand } from './command'
 import { type MarkdanPlugin, createPluginApi } from './plugin'
+import { EditorHistory } from './history'
 
 export interface Markdan {
   version: string
@@ -49,13 +50,14 @@ export interface MarkdanContext {
   command: MarkdanCommand
   plugin: MarkdanPlugin
   focused: boolean
+  history: EditorHistory
 }
 
 export function createAppContext() {
   const ctx: MarkdanContext = {
     config: {} as MarkdanConfig,
     selection: {} as EditorSelection,
-    schema: createSchemaApi(),
+    schema: {} as MarkdanSchema,
     dataSource: '',
     viewBlocks: [],
     renderedElements: [],
@@ -64,15 +66,20 @@ export function createAppContext() {
     command: {} as MarkdanCommand,
     plugin: {} as MarkdanPlugin,
     focused: false,
+    history: {} as EditorHistory,
   }
 
+  ctx.schema = createSchemaApi(ctx)
   ctx.selection = new EditorSelection(ctx)
+  ctx.history = new EditorHistory(ctx)
   const command = createCommandApi(ctx)
   const plugin = createPluginApi(ctx)
 
   command.registerCommand('delete', deleteContentCommand)
   command.registerCommand('break-line', breakLineCommand)
   command.registerCommand('insert', insertCommand)
+  command.registerCommand('undo', undoCommand)
+  command.registerCommand('redo', redoCommand)
 
   ctx.command = command
   ctx.plugin = plugin
@@ -120,50 +127,55 @@ export function createApp() {
 
       ctx.interface = createEditorInterfaceApi(oEl, ctx)
 
-      ctx.schema.append(ctx.schema.createElement('h1', [], 'Heading 1'))
-      const h2 = ctx.schema.append(ctx.schema.createElement('h2', [], ''))
-      const strong = ctx.schema.append(ctx.schema.createElement('strong', [h2.id], 'Strong'))
-      ctx.schema.append(ctx.schema.createElement('italic', [h2.id, strong.id], 'Text'))
-      ctx.schema.append(ctx.schema.createElement('paragraph', [], 'mount(el: string | HTMLElement, options: MarkdanInterfaceOptions): void'))
+      // 初始化历史记录
+      ctx.history.init()
 
-      ctx.schema.append(ctx.schema.createElement('h2', [], 'Heading 4'))
-      ctx.schema.append(ctx.schema.createElement('paragraph', [], 'mount(el: string | HTMLElement, options: MarkdanInterfaceOptions): void'))
-      ctx.schema.append(ctx.schema.createElement('h2', [], 'Heading 5'))
-      ctx.schema.append(ctx.schema.createElement('paragraph', [], 'mount(el: string | HTMLElement, options: MarkdanInterfaceOptions): void'))
-      ctx.schema.append(ctx.schema.createElement('h2', [], 'Heading 6'))
-      ctx.schema.append(ctx.schema.createElement('paragraph', [], 'mount(el: string | HTMLElement, options: MarkdanInterfaceOptions): void'))
-      ctx.schema.append(ctx.schema.createElement('h2', [], 'Heading 7'))
-      ctx.schema.append(ctx.schema.createElement('paragraph', [], 'mount(el: string | HTMLElement, options: MarkdanInterfaceOptions): void'))
-      ctx.schema.append(ctx.schema.createElement('h2', [], 'Heading 8'))
-      ctx.schema.append(ctx.schema.createElement('paragraph', [], 'mount(el: string | HTMLElement, options: MarkdanInterfaceOptions): void'))
-      ctx.schema.append(ctx.schema.createElement('h2', [], 'Heading 9'))
-      ctx.schema.append(ctx.schema.createElement('paragraph', [], 'mount(el: string | HTMLElement, options: MarkdanInterfaceOptions): void'))
-      ctx.schema.append(ctx.schema.createElement('h2', [], 'Heading 10'))
-      ctx.schema.append(ctx.schema.createElement('paragraph', [], 'mount(el: string | HTMLElement, options: MarkdanInterfaceOptions): void'))
-      ctx.schema.append(ctx.schema.createElement('h2', [], 'Heading 11'))
-      ctx.schema.append(ctx.schema.createElement('paragraph', [], 'mount(el: string | HTMLElement, options: MarkdanInterfaceOptions): void'))
-      ctx.schema.append(ctx.schema.createElement('h2', [], 'Heading 12'))
-      ctx.schema.append(ctx.schema.createElement('paragraph', [], 'mount(el: string | HTMLElement, options: MarkdanInterfaceOptions): void'))
-      ctx.schema.append(ctx.schema.createElement('h2', [], 'Heading 13'))
-      ctx.schema.append(ctx.schema.createElement('paragraph', [], 'mount(el: string | HTMLElement, options: MarkdanInterfaceOptions): void'))
-      ctx.schema.append(ctx.schema.createElement('h2', [], 'Heading 14'))
-      ctx.schema.append(ctx.schema.createElement('paragraph', [], 'mount(el: string | HTMLElement, options: MarkdanInterfaceOptions): void'))
-      ctx.schema.append(ctx.schema.createElement('h2', [], 'Heading 15'))
-      ctx.schema.append(ctx.schema.createElement('paragraph', [], 'mount(el: string | HTMLElement, options: MarkdanInterfaceOptions): void'))
-      ctx.schema.append(ctx.schema.createElement('h2', [], 'Heading 16'))
-      ctx.schema.append(ctx.schema.createElement('paragraph', [], 'mount(el: string | HTMLElement, options: MarkdanInterfaceOptions): void'))
-      ctx.schema.append(ctx.schema.createElement('h2', [], 'Heading 17'))
-      ctx.schema.append(ctx.schema.createElement('paragraph', [], 'mount(el: string | HTMLElement, options: MarkdanInterfaceOptions): void'))
-      ctx.schema.append(ctx.schema.createElement('h2', [], 'Heading 18'))
-      ctx.schema.append(ctx.schema.createElement('paragraph', [], 'mount(el: string | HTMLElement, options: MarkdanInterfaceOptions): void'))
-      ctx.schema.append(ctx.schema.createElement('h2', [], 'Heading 19'))
-      ctx.schema.append(ctx.schema.createElement('paragraph', [], 'mount(el: string | HTMLElement, options: MarkdanInterfaceOptions): void'))
-      ctx.schema.append(ctx.schema.createElement('h2', [], 'Heading 20'))
-      ctx.schema.append(ctx.schema.createElement('paragraph', [], 'mount(el: string | HTMLElement, options: MarkdanInterfaceOptions): void'))
-      ctx.schema.append(ctx.schema.createElement('h2', [], 'Heading 21'))
-      ctx.schema.append(ctx.schema.createElement('paragraph', [], 'mount(el: string | HTMLElement, options: MarkdanInterfaceOptions): void'))
+      // @todo - 测试数据
+      // ctx.schema.splice(0, 1, ctx.schema.createElement('h1', [], 'Heading 1'))
+      // const h2 = ctx.schema.append(ctx.schema.createElement('h2', [], ''))
+      // const strong = ctx.schema.append(ctx.schema.createElement('strong', [h2.id], 'Strong'))
+      // ctx.schema.append(ctx.schema.createElement('italic', [h2.id, strong.id], 'Text'))
+      // ctx.schema.append(ctx.schema.createElement('paragraph', [], 'mount(el: string | HTMLElement, options: MarkdanInterfaceOptions): void'))
+
+      // ctx.schema.append(ctx.schema.createElement('h2', [], 'Heading 4'))
+      // ctx.schema.append(ctx.schema.createElement('paragraph', [], 'mount(el: string | HTMLElement, options: MarkdanInterfaceOptions): void'))
+      // ctx.schema.append(ctx.schema.createElement('h2', [], 'Heading 5'))
+      // ctx.schema.append(ctx.schema.createElement('paragraph', [], 'mount(el: string | HTMLElement, options: MarkdanInterfaceOptions): void'))
+      // ctx.schema.append(ctx.schema.createElement('h2', [], 'Heading 6'))
+      // ctx.schema.append(ctx.schema.createElement('paragraph', [], 'mount(el: string | HTMLElement, options: MarkdanInterfaceOptions): void'))
+      // ctx.schema.append(ctx.schema.createElement('h2', [], 'Heading 7'))
+      // ctx.schema.append(ctx.schema.createElement('paragraph', [], 'mount(el: string | HTMLElement, options: MarkdanInterfaceOptions): void'))
+      // ctx.schema.append(ctx.schema.createElement('h2', [], 'Heading 8'))
+      // ctx.schema.append(ctx.schema.createElement('paragraph', [], 'mount(el: string | HTMLElement, options: MarkdanInterfaceOptions): void'))
+      // ctx.schema.append(ctx.schema.createElement('h2', [], 'Heading 9'))
+      // ctx.schema.append(ctx.schema.createElement('paragraph', [], 'mount(el: string | HTMLElement, options: MarkdanInterfaceOptions): void'))
+      // ctx.schema.append(ctx.schema.createElement('h2', [], 'Heading 10'))
+      // ctx.schema.append(ctx.schema.createElement('paragraph', [], 'mount(el: string | HTMLElement, options: MarkdanInterfaceOptions): void'))
+      // ctx.schema.append(ctx.schema.createElement('h2', [], 'Heading 11'))
+      // ctx.schema.append(ctx.schema.createElement('paragraph', [], 'mount(el: string | HTMLElement, options: MarkdanInterfaceOptions): void'))
+      // ctx.schema.append(ctx.schema.createElement('h2', [], 'Heading 12'))
+      // ctx.schema.append(ctx.schema.createElement('paragraph', [], 'mount(el: string | HTMLElement, options: MarkdanInterfaceOptions): void'))
+      // ctx.schema.append(ctx.schema.createElement('h2', [], 'Heading 13'))
+      // ctx.schema.append(ctx.schema.createElement('paragraph', [], 'mount(el: string | HTMLElement, options: MarkdanInterfaceOptions): void'))
+      // ctx.schema.append(ctx.schema.createElement('h2', [], 'Heading 14'))
+      // ctx.schema.append(ctx.schema.createElement('paragraph', [], 'mount(el: string | HTMLElement, options: MarkdanInterfaceOptions): void'))
+      // ctx.schema.append(ctx.schema.createElement('h2', [], 'Heading 15'))
+      // ctx.schema.append(ctx.schema.createElement('paragraph', [], 'mount(el: string | HTMLElement, options: MarkdanInterfaceOptions): void'))
+      // ctx.schema.append(ctx.schema.createElement('h2', [], 'Heading 16'))
+      // ctx.schema.append(ctx.schema.createElement('paragraph', [], 'mount(el: string | HTMLElement, options: MarkdanInterfaceOptions): void'))
+      // ctx.schema.append(ctx.schema.createElement('h2', [], 'Heading 17'))
+      // ctx.schema.append(ctx.schema.createElement('paragraph', [], 'mount(el: string | HTMLElement, options: MarkdanInterfaceOptions): void'))
+      // ctx.schema.append(ctx.schema.createElement('h2', [], 'Heading 18'))
+      // ctx.schema.append(ctx.schema.createElement('paragraph', [], 'mount(el: string | HTMLElement, options: MarkdanInterfaceOptions): void'))
+      // ctx.schema.append(ctx.schema.createElement('h2', [], 'Heading 19'))
+      // ctx.schema.append(ctx.schema.createElement('paragraph', [], 'mount(el: string | HTMLElement, options: MarkdanInterfaceOptions): void'))
+      // ctx.schema.append(ctx.schema.createElement('h2', [], 'Heading 20'))
+      // ctx.schema.append(ctx.schema.createElement('paragraph', [], 'mount(el: string | HTMLElement, options: MarkdanInterfaceOptions): void'))
+      // ctx.schema.append(ctx.schema.createElement('h2', [], 'Heading 21'))
+      // ctx.schema.append(ctx.schema.createElement('paragraph', [], 'mount(el: string | HTMLElement, options: MarkdanInterfaceOptions): void'))
 
       ctx.emitter.emit('schema:change', ctx.schema)
+      ctx.emitter.emit('selection:change', ctx.selection.ranges)
     },
   }
 }
