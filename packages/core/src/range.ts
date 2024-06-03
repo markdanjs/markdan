@@ -241,78 +241,7 @@ export class EditorSelectionRange {
     }
 
     // 选区位置检测
-    try {
-      const range = new Range()
-      const element = this.#ctx.interface.ui.mainViewer.querySelector<HTMLElement>(`[data-id="${block}"]`)!
-      setOriginalRange(range, element, offset, 'Both')
-
-      const rect = range.getBoundingClientRect()
-      const {
-        config: {
-          containerRect: {
-            x,
-            y,
-            width,
-            height,
-          },
-          scrollbarSize,
-        },
-        emitter,
-      } = this.#ctx
-
-      const point = { x: rect.x, y: rect.y }
-      const isOutOfContainer = !isPointInRect(point, {
-        x,
-        y,
-        width: width - scrollbarSize - 4,
-        height: height - scrollbarSize - 4,
-      })
-
-      if (isOutOfContainer) {
-        // 当前指针没在容器内部，让容器滚动
-        emitter.emit('scrollbar:change', {
-          x: point.x > x + width - scrollbarSize
-            ? point.x - (x + width - scrollbarSize)
-            : point.x < x
-              ? point.x - x
-              : 0,
-          y: point.y > height - y - scrollbarSize
-            ? point.y - (height - y - scrollbarSize)
-            : point.y < y
-              ? point.y - y
-              : 0,
-          action: 'scrollBy',
-        })
-      }
-    } catch (err) {
-      // 当前内容没被渲染到容器，让容器滚动到指定位置
-      const {
-        config: { containerRect, scrollbarSize },
-        schema: { elements },
-        renderedElements,
-        emitter,
-        interface: { scrollbar },
-      } = this.#ctx
-
-      const element = elements.find(item => item.id === block)!
-      const viewLine = renderedElements.find(item => item.id === (element.groupIds[0] ?? element.id))!
-      let x = 0
-      let y = 0
-      if (viewLine.y > containerRect.height - containerRect.y - scrollbarSize) {
-        y = viewLine.y - (containerRect.height - containerRect.y - scrollbarSize)
-        x = viewLine.x + viewLine.width
-      } else if (viewLine.y < containerRect.y) {
-        y = -scrollbar.scrollY
-        x = -scrollbar.scrollX
-      }
-
-      // 当前指针没在容器内部，让容器滚动
-      emitter.emit('scrollbar:change', {
-        x,
-        y,
-        action: 'scrollBy',
-      })
-    }
+    EditorSelectionRange.detectRange(block, offset, this.#ctx)
 
     return { block, offset }
   }
@@ -499,5 +428,79 @@ export class EditorSelectionRange {
     }
 
     this.#rectangles = rectangles
+  }
+
+  static detectRange(block: string, offset: number, ctx: MarkdanContext) {
+    const {
+      config: {
+        containerRect: {
+          x,
+          y,
+          width,
+          height,
+        },
+        scrollbarSize,
+      },
+      interface: {
+        ui: { mainViewer },
+        scrollbar,
+      },
+      emitter,
+      schema: { elements },
+      renderedElements,
+    } = ctx
+    try {
+      const range = new Range()
+      const element = mainViewer.querySelector<HTMLElement>(`[data-id="${block}"]`)!
+      setOriginalRange(range, element, offset, 'Both')
+
+      const rect = range.getBoundingClientRect()
+
+      const point = { x: rect.x, y: rect.y }
+      const isOutOfContainer = !isPointInRect(point, {
+        x,
+        y,
+        width: width - scrollbarSize - 4,
+        height: height - scrollbarSize - 4,
+      })
+
+      if (isOutOfContainer) {
+        // 当前指针没在容器内部，让容器滚动
+        emitter.emit('scrollbar:change', {
+          x: point.x > x + width - scrollbarSize
+            ? point.x - (x + width - scrollbarSize)
+            : point.x < x
+              ? point.x - x
+              : 0,
+          y: point.y > height - y - scrollbarSize
+            ? point.y - (height - y - scrollbarSize)
+            : point.y < y
+              ? point.y - y
+              : 0,
+          action: 'scrollBy',
+        })
+      }
+    } catch (err) {
+      // 当前内容没被渲染到容器，让容器滚动到指定位置
+
+      const element = elements.find(item => item.id === block)!
+      const viewLine = renderedElements.find(item => item.id === (element.groupIds[0] ?? element.id))!
+      let x = 0
+      let y = 0
+      if (viewLine.y > height - y - scrollbarSize) {
+        y = viewLine.y - (height - y - scrollbarSize)
+        x = viewLine.x + viewLine.width
+      } else if (viewLine.y < y) {
+        y = -scrollbar.scrollY
+        x = -scrollbar.scrollX
+      }
+
+      // 当前指针没在容器内部，让容器滚动
+      emitter.emit('scrollbar:change', {
+        x,
+        y,
+        action: 'scrollBy',
+      })
+    }
   }
 }

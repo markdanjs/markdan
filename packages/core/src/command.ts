@@ -1,5 +1,5 @@
 import { createRandomId } from '@markdan/helper'
-import type { MarkdanContext, MarkdanSchemaElement } from '.'
+import { EditorSelectionRange, type MarkdanContext, type MarkdanSchemaElement } from '.'
 
 export interface MarkdanCommand {
   registerCommand(name: string, command: CommandHandler): Command
@@ -182,6 +182,10 @@ export function breakLineCommand(ctx: MarkdanContext) {
 
   ctx.emitter.emit('schema:change')
   ctx.emitter.emit('selection:change', ctx.selection.ranges)
+
+  if (ctx.selection.currentRange) {
+    EditorSelectionRange.detectRange(ctx.selection.currentRange.anchorBlock, ctx.selection.currentRange.anchorOffset, ctx)
+  }
 }
 
 /**
@@ -211,6 +215,10 @@ export function insertCommand(ctx: MarkdanContext, value: string) {
   })
   ctx.emitter.emit('schema:change')
   ctx.emitter.emit('selection:change', ctx.selection.ranges)
+
+  if (ctx.selection.currentRange) {
+    EditorSelectionRange.detectRange(ctx.selection.currentRange.anchorBlock, ctx.selection.currentRange.anchorOffset, ctx)
+  }
 }
 
 // 重做

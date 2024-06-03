@@ -172,6 +172,7 @@ function init(el: HTMLElement, ctx: MarkdanContext) {
     ctx.config.maxWidth = 0
     ctx.interface.renderer.render(blocks)
     ctx.interface.lineNumber.update()
+    ctx.interface.scrollbar.update()
   })
   ctx.emitter.on('scrollbar:change', (options) => {
     ctx.interface.renderer.onScroll(options)
