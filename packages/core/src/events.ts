@@ -53,6 +53,10 @@ export function registerEventHandler(ctx: MarkdanContext) {
       case 'Backspace':
         ctx.command.executeCommand('delete')
         break
+      case 'Tab':
+        e.preventDefault()
+        ctx.command.executeCommand('insert', '  ')
+        break
       case 'ArrowUp':
       case 'ArrowRight':
       case 'ArrowDown':
