@@ -76,23 +76,13 @@ export function deleteContentCommand(ctx: MarkdanContext) {
       } else {
         if (idx === 0) return
 
-        // 删除前一个元素的最后一个字符，并且把当前元素以及它的后代都增加一项父级
-        let prevElementIdx = idx - 1
-        let prevElement = elements[prevElementIdx]
-        while (prevElement.content === '' && prevElementIdx >= 0) {
-          prevElement = elements[--prevElementIdx]
-        }
-
+        // 删除当前元素，并将选区移动到上一个元素的最后一个字符
+        // @todo - 如果当前位置是行首，且类型不是一个段落，则将其转为 Paragraph
+        const prevElementIdx = idx - 1
+        const prevElement = elements[prevElementIdx]
         const prevElementContentLength = prevElement.content.length
-
-        schema.splice(prevElementIdx, 1, {
-          ...prevElement,
-          content: `${prevElement.content.slice(0, -1)}${element.content.slice(anchorOffset)}`,
-        })
-
-        range.setRange(prevElement.id, prevElementContentLength - 1, prevElement.id, prevElementContentLength - 1)
-
-        schema.splice(prevElementIdx + 1, idx - (prevElementIdx + 1) + 1)
+        schema.splice(idx, 1)
+        range.setRange(prevElement.id, prevElementContentLength, prevElement.id, prevElementContentLength)
       }
     }
   })

@@ -66,6 +66,17 @@
     text-align: right;
     border-top: 1px solid var(--color-border);
   }
+
+  &.focus {
+    .markdan-editor-cursor,
+    .markdan-editor-range {
+      display: block;
+    }
+
+    .markdan-editor-line-number .wrapper > .active::after {
+      display: block;
+    }
+  }
 }
 
 :where(.markdan-editor-container) {
@@ -89,6 +100,7 @@
   .view-line {
     position: absolute;
     width: max-content;
+    white-space: pre-wrap;
 
     &:empty::after,
     :empty::after {
@@ -102,6 +114,7 @@
 }
 
 :where(.markdan-editor-cursor) {
+  display: none;
   position: absolute;
   z-index: 9;
   width: 2px;
@@ -112,6 +125,7 @@
 }
 
 :where(.markdan-editor-range) {
+  display: none;
   position: absolute;
   height: var(--line-height);
   background-color: var(--color-selection);
@@ -209,6 +223,7 @@
 
         &::after {
           content: '';
+          display: none;
           position: absolute;
           right: -8px;
           top: 50%;
